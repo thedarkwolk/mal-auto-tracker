@@ -1,0 +1,341 @@
+@font-face {
+  font-family: 'Archivo';
+  src: url('../fonts/archivo-latin.woff2') format('woff2');
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+/* Negro y blanco, como el bot (#0a0a0c / #f4f4f5), bordes afilados. Sobre negro los bordes van más claros que
+   el fondo para que las tarjetas se sigan distinguiendo. */
+:root {
+  --ground: #050506;
+  --surface: #0a0a0c;
+  --raised: #151518;
+  --sunken: #1f1f23;
+  --border: #2a2a30;
+  --divider: #1c1c20;
+  --text: #f4f4f5;
+  --muted: #a1a1aa;
+  --faint: #8b8b94;
+  --accent: #f4f4f5;
+  --accent-hover: #d4d4d8;
+  --accent-text: #ffffff;
+  --accent-ink: #0a0a0c;
+  --warn: #ffd27a;
+  --error: #ff8f8f;
+  --radius: 4px;
+  --radius-sm: 3px;
+  --radius-xs: 2px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  min-width: 300px;
+  margin: 0;
+  background: var(--surface);
+  color: var(--text);
+  font: 13px/1.45 Archivo, 'Segoe UI', system-ui, sans-serif;
+}
+/* Desde el icono es un popup que Chrome ajusta al contenido: necesita un ancho. Desde la mascota llena su iframe. */
+html:not(.embedded) body { width: 380px; }
+a { color: var(--text); }
+a:hover { color: var(--accent-hover); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Cabecera: solo pestañas y ajustes */
+.top {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 8px;
+  border-bottom: 1.5px solid var(--divider);
+}
+.logo {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 800;
+  font-size: 15px;
+}
+.chip {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--raised);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 1px 10px;
+  white-space: nowrap;
+}
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--faint);
+  cursor: pointer;
+}
+.icon-btn:hover { color: var(--text); background: var(--raised); }
+
+/* Secciones */
+section { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+section:empty, [hidden] { display: none !important; }
+.label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.label { font-size: 12px; font-weight: 700; color: var(--muted); }
+.muted { color: var(--faint); }
+.small { font-size: 12px; color: var(--faint); }
+.warn { color: var(--warn); }
+.error { color: var(--error); padding: 0 14px; }
+p { margin: 0; }
+
+/* Tarjeta del anime con la portada en grande, ocupando todo el ancho */
+.card.hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--raised);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.hero .cover-link { display: block; line-height: 0; }
+/* La portada entera, con su proporción original: nada de recortes */
+.hero .cover {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* La info del anime solo aparece sobre la portada al pasar el ratón (o al llegar con el teclado) */
+.hero:not(.no-cover) .card-body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 14px;
+  background: rgba(20, 21, 24, 0.9);
+  border-top: 1.5px solid var(--border);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+}
+.hero:not(.no-cover):hover .card-body,
+.hero:not(.no-cover):focus-within .card-body {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.hero .ep-of { color: var(--muted); }
+@media (prefers-reduced-motion: reduce) {
+  .hero .card-body { transition: none; transform: none; }
+}
+.hero .empty-cover {
+  height: 120px;
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  font-size: 12px;
+  background: var(--sunken);
+}
+.card-body { display: flex; flex-direction: column; gap: 6px; padding: 12px; min-width: 0; }
+.hero .card-title { font-size: 18px; }
+.hero .ep-num { font-size: 34px; }
+.card-title { font-weight: 800; font-size: 16px; line-height: 1.2; text-decoration: none; }
+.ep { display: flex; align-items: baseline; gap: 6px; }
+.ep-num { font-weight: 800; font-size: 30px; line-height: 1; color: var(--accent); }
+.ep-of { font-size: 13px; color: var(--muted); }
+.bar { height: 8px; margin-top: 3px; background: var(--sunken); border-radius: var(--radius-xs); overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--accent); }
+
+/* Botones y campos */
+button { font: inherit; cursor: pointer; }
+button:disabled { opacity: .5; cursor: default; }
+.primary {
+  height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 800;
+  font-size: 14px;
+}
+.primary:not(:disabled):hover { background: var(--accent-hover); }
+.secondary {
+  height: 44px;
+  padding: 0 16px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  color: var(--text);
+  font-weight: 700;
+}
+.secondary:not(:disabled):hover { background: var(--sunken); }
+.link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 12px;
+  text-decoration: underline;
+}
+.link:hover { color: var(--accent-hover); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.actions > * { flex: 1 1 auto; }
+.hint-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--faint); }
+.ok-line { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--accent-text); }
+
+label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+label.inline { flex-direction: row; align-items: center; justify-content: space-between; }
+input[type='text'], input[type='number'], input[type='password'] {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  background: var(--raised);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+}
+input[type='number'] { width: 72px; }
+input::placeholder { color: var(--faint); }
+.row { display: flex; gap: 6px; }
+.row .secondary { height: 36px; }
+
+/* Listas */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.list li + li { border-top: 1.5px solid var(--divider); }
+.list a { text-decoration: none; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list .count { flex: none; color: var(--muted); }
+.list .done { flex: none; font-weight: 700; color: var(--accent-text); }
+.results { max-height: 280px; overflow-y: auto; }
+.results li { justify-content: flex-start; cursor: pointer; }
+.results li:hover { background: var(--raised); }
+.results img { width: 28px; height: 40px; object-fit: cover; border-radius: var(--radius-xs); flex: none; }
+
+/* Pestañas */
+.tabs { flex: 1; display: flex; }
+.tab {
+  height: 48px;
+  padding: 0 14px;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1.5px;
+  color: var(--faint);
+  font-weight: 700;
+}
+.tab:hover { color: var(--text); }
+.tab[aria-selected='true'] { color: var(--text); border-bottom-color: var(--accent); }
+
+/* Mi lista */
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filter {
+  height: 28px;
+  padding: 0 10px;
+  background: var(--raised);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xs);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.filter:hover { color: var(--text); }
+.filter[aria-pressed='true'] { background: var(--accent); color: var(--accent-ink); }
+.mylist li { gap: 10px; padding: 8px 10px; }
+.mylist .thumb {
+  width: 40px;
+  height: 56px;
+  flex: none;
+  object-fit: cover;
+  background: var(--sunken);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xs);
+}
+.mylist .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.mylist .bar { height: 5px; margin-top: 2px; }
+.list a.btn-sm {
+  flex: none;
+  height: 32px;
+  padding: 0 10px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.list a.btn-sm:hover { background: var(--accent-hover); color: var(--accent-ink); }
+/* Web de siempre (JKAnime, AnimeFLV…): por debajo de Crunchyroll en prioridad */
+.list a.btn-sm.alt { background: var(--sunken); color: var(--text); border: 1.5px solid var(--border); }
+.list a.btn-sm.alt:hover { background: var(--raised); color: var(--text); }
+.list a.btn-sm.ghost { background: var(--raised); color: var(--muted); border: 1.5px solid var(--border); }
+.cr-toggle { height: 36px; flex: none; }
+
+/* Aviso en "Ahora viendo" cuando el anime también está en Crunchyroll */
+.cr-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--raised);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.cr-hint strong { color: var(--text); }
+.cr-hint .cr-open { font-weight: 800; color: var(--accent-text); }
+.cr-hint:hover { background: var(--sunken); color: var(--muted); }
+.list a.btn-sm.ghost:hover { color: var(--text); }
+
+.empty {
+  padding: 18px 14px;
+  text-align: center;
+  color: var(--faint);
+  background: var(--raised);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-sm);
+}
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-top: 1.5px solid var(--divider);
+  font-size: 12px;
+  color: var(--faint);
+}

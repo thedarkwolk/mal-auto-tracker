@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>MAL Auto Tracker · Opciones</title>
+  <link rel="stylesheet" href="../popup/popup.css">
+  <style>
+    html { background: var(--ground); }
+    body { min-width: 0; max-width: 640px; margin: 0 auto; padding: 32px 16px; background: var(--ground); font-size: 14px; }
+    .head { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    h1 { font-size: 20px; margin: 0; }
+    section { background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; padding: 16px 18px; gap: 10px; }
+    h2 { font-size: 15px; margin: 0; }
+    ol { padding-left: 20px; margin: 0; color: var(--muted); }
+    ol b { color: var(--text); }
+    li { margin-bottom: 8px; }
+    code { background: var(--raised); border: 1.5px solid var(--border); padding: 1px 6px; border-radius: var(--radius-xs); color: var(--text); user-select: all; word-break: break-all; }
+    .check { flex-direction: row; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
+    .check input { width: 16px; height: 16px; accent-color: var(--accent); }
+    input[type='range'] { accent-color: var(--accent); }
+    #thresholdLabel { color: var(--accent-text); }
+    #copy { height: 28px; padding: 0 10px; font-size: 12px; margin-left: 4px; }
+    #saved { margin-left: 10px; color: var(--accent-text); font-weight: 700; }
+    .buttons { display: flex; align-items: center; }
+    #mappings li > span:first-child { color: var(--muted); }
+    #mappings li { cursor: default; justify-content: space-between; }
+    #mappings li:hover { background: none; }
+    #clearMappings { align-self: flex-start; height: 36px; }
+    #sites { display: flex; flex-direction: column; gap: 6px; }
+  </style>
+</head>
+<body>
+  <div class="head"><div class="logo" aria-hidden="true">M</div><h1>MAL Auto Tracker</h1></div>
+
+  <section>
+    <h2>1. Crea tu Client ID en MyAnimeList</h2>
+    <ol>
+      <li>Abre <a href="https://myanimelist.net/apiconfig" target="_blank">myanimelist.net/apiconfig</a> y pulsa <b>Create ID</b>.</li>
+      <li><b>App Type</b>: <code>other</code></li>
+      <li><b>App Redirect URL</b>: <code id="redirect"></code> <button class="secondary" id="copy">Copiar</button></li>
+      <li><b>Homepage URL</b>: cualquiera (p. ej. <code>https://myanimelist.net</code>). El resto de campos, lo que quieras.</li>
+      <li>Copia el <b>Client ID</b> que te da y pégalo abajo.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>2. Configuración</h2>
+    <label><span>Client ID</span>
+      <input id="clientId" type="text" autocomplete="off">
+    </label>
+    <label><span>Client Secret <span class="small">(solo si elegiste App Type "web"; con "other" déjalo vacío)</span></span>
+      <input id="clientSecret" type="password" autocomplete="off">
+    </label>
+    <label><span>Marcar como visto al llegar al <strong id="thresholdLabel"></strong> del vídeo</span>
+      <input id="threshold" type="range" min="50" max="100" step="5">
+    </label>
+    <span class="label">Webs activas</span>
+    <div id="sites"></div>
+    <label class="check"><input id="toasts" type="checkbox"> Mostrar avisos en la página</label>
+    <label class="check"><input id="mascot" type="checkbox"> Mostrar la mascota en las webs (al pulsarla abre el panel)</label>
+    <div class="buttons"><button id="save" class="primary">Guardar</button><span id="saved" hidden>Guardado ✓</span></div>
+  </section>
+
+  <section>
+    <h2>Asociaciones guardadas</h2>
+    <p class="small">Qué anime de MAL corresponde a cada serie de cada web. Se crean solas o al corregirlas desde el panel.</p>
+    <ul id="mappings" class="list results"></ul>
+    <button class="secondary" id="clearMappings">Borrar todas</button>
+  </section>
+
+  <script src="options.js" type="module"></script>
+</body>
+</html>

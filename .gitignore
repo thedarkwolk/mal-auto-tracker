@@ -1,0 +1,9 @@
+# Páginas guardadas de las webs para probar selectores (contenido de terceros, con tokens de sesión)
+*.html
+!popup/*.html
+!options/*.html
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store

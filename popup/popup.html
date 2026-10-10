@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MAL Auto Tracker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="top">
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tabNow" aria-controls="viewNow" aria-selected="true">Ahora viendo</button>
+      <button class="tab" role="tab" id="tabList" aria-controls="viewList" aria-selected="false">Mi lista</button>
+    </nav>
+    <button id="openOptions" class="icon-btn" aria-label="Opciones">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </header>
+
+  <section id="account"></section>
+
+  <div id="viewList" role="tabpanel" aria-labelledby="tabList" hidden>
+    <section>
+      <div class="filters" id="filters"></div>
+      <div class="row">
+        <input id="listFilter" type="text" placeholder="Filtrar por título…" aria-label="Filtrar por título">
+        <button id="onlyCR" class="filter cr-toggle" aria-pressed="false">Solo Crunchyroll</button>
+      </div>
+      <p id="listInfo" class="small" hidden></p>
+      <ul id="myList" class="list mylist" hidden></ul>
+    </section>
+  </div>
+
+  <div id="viewNow" role="tabpanel" aria-labelledby="tabNow">
+  <section id="current"></section>
+
+  <section id="fix" hidden>
+    <label>Buscar en MAL o pegar enlace/ID
+      <div class="row">
+        <input id="fixQuery" type="text" placeholder="Título, https://myanimelist.net/anime/… o ID">
+        <button id="fixSearch" class="secondary">Buscar</button>
+      </div>
+    </label>
+    <label class="inline">Restar episodios (si la web numera seguido)
+      <input id="fixOffset" type="number" min="0" value="0">
+    </label>
+    <ul id="fixResults" class="list results" hidden></ul>
+  </section>
+
+  <section id="history"></section>
+  </div>
+  <p id="error" class="error" hidden></p>
+  <footer id="footer" hidden></footer>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

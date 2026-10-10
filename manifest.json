@@ -1,0 +1,128 @@
+{
+  "manifest_version": 3,
+  "name": "MAL Auto Tracker",
+  "version": "0.1.0",
+  "description": "Actualiza automáticamente tu lista de MyAnimeList mientras ves anime en Crunchyroll, JKAnime, AnimeFLV y Prime Video.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "storage",
+    "identity"
+  ],
+  "host_permissions": [
+    "https://myanimelist.net/*",
+    "https://api.myanimelist.net/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "MAL Auto Tracker",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    },
+    "default_popup": "popup/popup.html"
+  },
+  "options_page": "options/options.html",
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/matcher.js"
+      ],
+      "matches": [
+        "https://www.crunchyroll.com/*"
+      ]
+    },
+    {
+      "resources": [
+        "fonts/archivo-latin.woff2",
+        "mascot/*.svg"
+      ],
+      "matches": [
+        "https://www.crunchyroll.com/*",
+        "https://jkanime.net/*",
+        "*://*.animeflv.net/*",
+        "https://www.primevideo.com/*",
+        "https://www.amazon.es/*",
+        "https://www.amazon.com/*",
+        "https://www.amazon.co.uk/*"
+      ]
+    },
+    {
+      "resources": [
+        "popup/popup.html"
+      ],
+      "matches": [
+        "https://www.crunchyroll.com/*",
+        "https://jkanime.net/*",
+        "*://*.animeflv.net/*",
+        "https://www.primevideo.com/*",
+        "https://www.amazon.es/*",
+        "https://www.amazon.com/*",
+        "https://www.amazon.co.uk/*"
+      ],
+      "use_dynamic_url": true
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.crunchyroll.com/*"
+      ],
+      "js": [
+        "src/mascot.js",
+        "src/content/common.js",
+        "src/content/sites/crunchyroll.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://jkanime.net/*"
+      ],
+      "js": [
+        "src/mascot.js",
+        "src/content/common.js",
+        "src/content/sites/jkanime.js"
+      ]
+    },
+    {
+      "matches": [
+        "*://*.animeflv.net/*"
+      ],
+      "js": [
+        "src/mascot.js",
+        "src/content/common.js",
+        "src/content/sites/animeflv.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.primevideo.com/*",
+        "https://www.amazon.es/*",
+        "https://www.amazon.com/*",
+        "https://www.amazon.co.uk/*"
+      ],
+      "js": [
+        "src/mascot.js",
+        "src/content/common.js",
+        "src/content/sites/primevideo.js"
+      ]
+    },
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/content/video-watcher.js"
+      ],
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ]
+}
