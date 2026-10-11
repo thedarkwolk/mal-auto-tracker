@@ -11,6 +11,7 @@
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" id="tabNow" aria-controls="viewNow" aria-selected="true">Ahora viendo</button>
       <button class="tab" role="tab" id="tabList" aria-controls="viewList" aria-selected="false">Mi lista</button>
+      <button class="tab" role="tab" id="tabSeason" aria-controls="viewSeason" aria-selected="false">Temporada</button>
     </nav>
     <button id="openOptions" class="icon-btn" aria-label="Opciones">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
@@ -21,13 +22,20 @@
 
   <div id="viewList" role="tabpanel" aria-labelledby="tabList" hidden>
     <section>
-      <div class="filters" id="filters"></div>
-      <div class="row">
-        <input id="listFilter" type="text" placeholder="Filtrar por título…" aria-label="Filtrar por título">
-        <button id="onlyCR" class="filter cr-toggle" aria-pressed="false">Solo Crunchyroll</button>
-      </div>
       <p id="listInfo" class="small" hidden></p>
       <ul id="myList" class="list mylist" hidden></ul>
+    </section>
+  </div>
+
+  <div id="viewSeason" role="tabpanel" aria-labelledby="tabSeason" hidden>
+    <section>
+      <div class="season-nav">
+        <button id="seasonPrev" class="icon-btn" aria-label="Temporada anterior">‹</button>
+        <strong id="seasonName"></strong>
+        <button id="seasonNext" class="icon-btn" aria-label="Temporada siguiente">›</button>
+      </div>
+      <p id="seasonInfo" class="small" hidden></p>
+      <ul id="seasonList" class="continue" hidden></ul>
     </section>
   </div>
 
@@ -51,6 +59,20 @@
   </div>
   <p id="error" class="error" hidden></p>
   <footer id="footer" hidden></footer>
+
+  <!-- Filtros de Mi lista y Temporada, abajo: en el panel del bot comparten franja con él (va a su izquierda) -->
+  <nav id="filterBar" class="filter-bar" aria-label="Filtros">
+    <div id="listBar" class="bar-group" hidden>
+      <div class="chips" id="filters"></div>
+      <div class="bar-row">
+        <input id="listFilter" type="search" placeholder="Filtrar por título…" aria-label="Filtrar por título">
+        <button id="onlyCR" class="filter cr-toggle" aria-pressed="false" title="Solo los que están en Crunchyroll">Crunchyroll</button>
+      </div>
+    </div>
+    <div id="seasonBar" class="bar-group" hidden>
+      <div class="chips" id="seasonFilters"></div>
+    </div>
+  </nav>
 
   <script src="popup.js" type="module"></script>
 </body>

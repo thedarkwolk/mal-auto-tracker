@@ -169,14 +169,36 @@ function watchUrl(link, watched, total) {
 }
 
 // ---------- Dónde se puede ver de forma oficial. La ficha web de MAL lista las plataformas (la API oficial
-// no lo da). Su marca de "disponible en tu región" no es fiable (JJK sale como no disponible y está en
-// Crunchyroll España), así que cuenta que MAL lo liste. Sus enlaces de Crunchyroll son antiguos y acaban
-// en la portada, por eso el panel abre la búsqueda de Crunchyroll con el título.
+// no lo da) con datos de JustWatch para el país desde el que se pide, o sea, el tuyo. Solo cuenta Crunchyroll
+// si MAL lo marca "available": también lista plataformas de otros países (Steins;Gate enlazaba a Crunchyroll
+// Argentina) y eso hacía ofrecer animes que aquí no están. Si el enlace lleva a una página concreta de
+// Crunchyroll (va dentro del de JustWatch, en "r="), se usa tal cual; si no, el panel busca por título.
 
 const STREAM_TTL = 7 * 24 * 3600 * 1000;
+// Sube si cambia cómo se interpreta la ficha: las entradas guardadas con otra versión se vuelven a pedir.
+const STREAM_VERSION = 2;
 
 async function getStreamingCache() {
   return (await chrome.storage.local.get('platforms')).platforms || {};
+}
+
+const streamFresh = (c) => !!c && c.v === STREAM_VERSION && Date.now() - c.at < STREAM_TTL;
+
+// Una búsqueda en Crunchyroll que no encontró el anime vale lo que dura la caché, no para siempre.
+const crMissingNow = (c) => !!c?.crMissing && Date.now() - (c.crMissingAt || 0) < STREAM_TTL;
+
+// Enlace de MAL a Crunchyroll → página de Crunchyroll de un anime (serie o episodio), o null si no lleva a una
+// (los antiguos "series-283782" o la portada no sirven).
+function crunchyrollPage(url) {
+  let target = url;
+  try {
+    const u = new URL(url);
+    if (u.hostname === 'click.justwatch.com') target = u.searchParams.get('r') || '';
+  } catch {
+    return null;
+  }
+  target = target.replace(/^http:/, 'https:');
+  return /^https:\/\/www\.crunchyroll\.com\/(?:[a-z-]+\/)?(?:series|watch)\/[A-Z0-9]+/.test(target) ? target : null;
 }
 
 async function fetchStreaming(id) {
@@ -190,9 +212,14 @@ async function fetchStreaming(id) {
     const available = /\bbroadcast-item available\b/.test(tag);
     if (href && name) platforms.push({ name, url: href.replace(/^http:/, 'https:'), available });
   }
+  const cr = platforms.find((p) => /crunchyroll/i.test(p.name) && p.available);
+  const page = cr && crunchyrollPage(cr.url);
   return {
+    v: STREAM_VERSION,
     at: Date.now(),
-    crunchyroll: platforms.some((p) => /crunchyroll/i.test(p.name)),
+    crunchyroll: !!cr,
+    // Página de la serie: directa. Página de un episodio: el panel la abre y desde ahí se salta a la serie.
+    ...(page && /\/series\//.test(page) ? { crUrl: page } : { crLink: page || null }),
     platforms,
   };
 }
@@ -206,7 +233,7 @@ async function getStreaming(ids, { maxFetch = 8 } = {}) {
   const missing = [];
   for (const id of ids) {
     const c = cache[id];
-    if (c && Date.now() - c.at < STREAM_TTL) crunchyroll[id] = c.crunchyroll;
+    if (streamFresh(c)) crunchyroll[id] = c.crunchyroll && !crMissingNow(c);
     else missing.push(id);
   }
   const toFetch = missing.slice(0, maxFetch);
@@ -216,7 +243,7 @@ async function getStreaming(ids, { maxFetch = 8 } = {}) {
       for (const id of toFetch) {
         try {
           fetched[id] = await fetchStreaming(id);
-          crunchyroll[id] = fetched[id].crunchyroll;
+          crunchyroll[id] = fetched[id].crunchyroll && !crMissingNow(cache[id]);
         } catch (e) {
           console.warn('[MAL Auto] plataformas', id, e.message);
           if (/\b(403|429)\b/.test(e.message)) break; // MAL nos frena: lo dejamos para luego
@@ -225,8 +252,11 @@ async function getStreaming(ids, { maxFetch = 8 } = {}) {
       }
       const fresh = await getStreamingCache();
       for (const [id, entry] of Object.entries(fetched)) {
-        // Si ya comprobamos que Crunchyroll no lo tiene, que MAL lo siga enlazando no cambia nada.
-        fresh[id] = { ...fresh[id], ...entry, ...(fresh[id]?.crMissing && { crunchyroll: false }) };
+        // Se conserva la serie que ya encontró el panel (crUrl) y, mientras no caduque, el "no está" de una
+        // búsqueda fallida.
+        const prev = fresh[id] || {};
+        fresh[id] = { ...entry, crUrl: entry.crUrl || prev.crUrl || null };
+        if (crMissingNow(prev)) Object.assign(fresh[id], { crMissing: true, crMissingAt: prev.crMissingAt });
       }
       await chrome.storage.local.set({ platforms: fresh });
     });
@@ -241,7 +271,83 @@ async function saveCrunchyrollUrl(malId, url) {
   if (!/^https:\/\/www\.crunchyroll\.com\/(?:[a-z-]+\/)?series\//.test(url)) return;
   const cache = await getStreamingCache();
   cache[malId] = { at: Date.now(), platforms: [], ...cache[malId], crunchyroll: true, crUrl: url, crMissing: false };
+  if (cache[malId].v !== STREAM_VERSION) cache[malId].at = 0; // la ficha está sin leer con el criterio actual
   await chrome.storage.local.set({ platforms: cache });
+}
+
+// ---------- Episodios emitidos, de AniList (API pública, sin cuenta; busca por id de MAL). Sirve para saber si
+// vas al día con un anime en emisión y no ofrecer "Ver" cuando aún no ha salido el siguiente episodio.
+
+const ANILIST = 'https://graphql.anilist.co';
+const AIRING_TTL = 6 * 3600 * 1000;
+const AIRING_QUERY = `query ($ids: [Int]) {
+  Page(perPage: 50) {
+    media(idMal_in: $ids, type: ANIME) { idMal status episodes nextAiringEpisode { episode airingAt } }
+  }
+}`;
+
+// Una entrada guardada caduca a las 6 h o en cuanto se emite el episodio que esperaba, lo que llegue antes.
+const airingFresh = (a) => a && Date.now() - a.at < AIRING_TTL && !(a.next && Date.now() >= a.next.at);
+
+// Devuelve { [malId]: { aired, next } }: aired = último episodio emitido (null si no se sabe) y
+// next = { episode, at } del siguiente, si hay fecha. Los que AniList no conoce no aparecen.
+async function getAiring(ids) {
+  const { airing: cache = {} } = await chrome.storage.local.get('airing');
+  const missing = ids.filter((id) => !airingFresh(cache[id]));
+  for (let i = 0; i < missing.length; i += 50) {
+    const chunk = missing.slice(i, i + 50);
+    try {
+      const res = await fetch(ANILIST, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ query: AIRING_QUERY, variables: { ids: chunk } }),
+      });
+      if (!res.ok) throw new Error(`AniList ${res.status}`);
+      const media = (await res.json()).data?.Page?.media || [];
+      for (const id of chunk) cache[id] = { at: Date.now(), aired: null, next: null }; // por si AniList no lo tiene
+      for (const m of media) {
+        const next = m.nextAiringEpisode;
+        cache[m.idMal] = {
+          at: Date.now(),
+          aired: next ? next.episode - 1 : m.status === 'FINISHED' ? m.episodes : null,
+          next: next ? { episode: next.episode, at: next.airingAt * 1000 } : null,
+        };
+      }
+    } catch (e) {
+      console.warn('[MAL Auto] AniList', e.message); // sin datos: el panel se comporta como siempre
+      break;
+    }
+  }
+  await chrome.storage.local.set({ airing: cache });
+  return Object.fromEntries(ids.filter((id) => cache[id]).map((id) => [id, { aired: cache[id].aired, next: cache[id].next }]));
+}
+
+// Estrenos de una temporada (series de TV y ONA que empiezan en ella), de más a menos populares, con lo que ya se
+// sepa de Crunchyroll. Las continuaciones de otras temporadas se quedan fuera: ya salen en "Seguir viendo".
+async function getSeasonList(year, season) {
+  const [nodes, streaming] = await Promise.all([mal.getSeason(year, season), getStreamingCache()]);
+  return nodes
+    .filter((n) => ['tv', 'ona'].includes(n.media_type))
+    .filter((n) => n.start_season?.year === year && n.start_season?.season === season)
+    .map((node) => {
+      const stream = streaming[node.id];
+      const ls = node.my_list_status;
+      return {
+        id: node.id,
+        title: node.title,
+        enTitle: node.alternative_titles?.en || null,
+        picture: node.main_picture?.medium || null,
+        numEpisodes: node.num_episodes || 0,
+        mediaType: node.media_type,
+        mean: node.mean || null,
+        onAir: node.status === 'currently_airing',
+        listStatus: ls?.status || null,
+        watched: ls?.num_episodes_watched || 0,
+        crunchyroll: streamFresh(stream) ? stream.crunchyroll && !crMissingNow(stream) : undefined,
+        crUrl: stream?.crUrl || null,
+        crLink: streamFresh(stream) ? stream.crLink || null : null,
+      };
+    });
 }
 
 async function getMyList(status) {
@@ -267,10 +373,11 @@ async function getMyList(status) {
       watchUrl: watchUrl(link, watched, total),
       nextEpisode: link?.template && (!total || watched < total) ? watched + 1 : null,
       // undefined = aún no comprobado (el panel lo pide aparte); false = no está en Crunchyroll
-      crunchyroll: stream && Date.now() - stream.at < STREAM_TTL ? !!stream.crunchyroll : undefined,
+      crunchyroll: streamFresh(stream) ? stream.crunchyroll && !crMissingNow(stream) : undefined,
       // Título para buscar en Crunchyroll: el inglés suele ser el que usan ellos.
       enTitle: node.alternative_titles?.en || null,
       crUrl: stream?.crUrl || null,
+      crLink: streamFresh(stream) ? stream.crLink || null : null,
     };
   });
 }
@@ -440,9 +547,13 @@ async function handle(msg, sender) {
       if (state?.phase === 'error') state = await onEpisode(tabId, state.info, { force: true });
       let crunchyroll = null;
       let crUrl = null;
+      let crLink = null;
       if (state?.anime && state.info.site !== 'crunchyroll') {
         const cached = (await getStreamingCache())[state.anime.id];
-        if (cached) ({ crunchyroll, crUrl = null } = cached);
+        if (streamFresh(cached)) {
+          ({ crUrl = null, crLink = null } = cached);
+          crunchyroll = cached.crunchyroll && !crMissingNow(cached);
+        }
         // Sin comprobar todavía: se pide en segundo plano y el panel se refresca al guardarse.
         else getStreaming([state.anime.id]).catch(() => {});
       }
@@ -450,6 +561,7 @@ async function handle(msg, sender) {
         state,
         crunchyroll,
         crUrl,
+        crLink,
         user: await mal.getUser(),
         configured: !!settings.clientId,
         threshold: settings.threshold,
@@ -461,18 +573,29 @@ async function handle(msg, sender) {
       return { state: await markTab(tabId, { manual: true }) };
     case 'myList':
       return { items: await getMyList(msg.status) };
+    case 'season':
+      return { items: await getSeasonList(Number(msg.year), String(msg.season)) };
+    case 'addToList': {
+      // Desde la pestaña Temporada: se apunta como pendiente (o el estado que pida el panel).
+      if (!(await mal.getUser())) throw new Error('Conecta tu cuenta de MyAnimeList para añadir animes.');
+      const status = ['plan_to_watch', 'watching'].includes(msg.status) ? msg.status : 'plan_to_watch';
+      await mal.updateListStatus(Number(msg.id), { status });
+      return { status };
+    }
     case 'crSeriesFound':
       await saveCrunchyrollUrl(Number(msg.malId), String(msg.url));
       return {};
     case 'crSeriesMissing': {
       const cache = await getStreamingCache();
       const id = Number(msg.malId);
-      cache[id] = { at: Date.now(), platforms: [], ...cache[id], crunchyroll: false, crUrl: null, crMissing: true };
+      cache[id] = { at: Date.now(), platforms: [], ...cache[id], crUrl: null, crMissing: true, crMissingAt: Date.now() };
       await chrome.storage.local.set({ platforms: cache });
       return {};
     }
     case 'streaming':
       return await getStreaming(msg.ids || []);
+    case 'airing':
+      return { airing: await getAiring((msg.ids || []).map(Number)) };
     case 'search': {
       let results = await mal.search(msg.query);
       if (!results.length) results = await mal.searchWeb(msg.query);

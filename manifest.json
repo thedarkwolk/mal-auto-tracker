@@ -15,7 +15,8 @@
   ],
   "host_permissions": [
     "https://myanimelist.net/*",
-    "https://api.myanimelist.net/*"
+    "https://api.myanimelist.net/*",
+    "https://graphql.anilist.co/*"
   ],
   "background": {
     "service_worker": "src/background.js",

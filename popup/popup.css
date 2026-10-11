@@ -38,7 +38,12 @@ body {
   font: 13px/1.45 Archivo, 'Segoe UI', system-ui, sans-serif;
 }
 /* Desde el icono es un popup que Chrome ajusta al contenido: necesita un ancho. Desde la mascota llena su iframe. */
-html:not(.embedded) body { width: 380px; }
+html:not(.embedded) body { width: 420px; }
+
+/* Barra de scroll fina y casi invisible sobre el negro; se aclara un poco al pasar por encima */
+html, .results { scrollbar-width: thin; scrollbar-color: var(--sunken) transparent; }
+html:hover, .results:hover { scrollbar-color: #3a3a41 transparent; }
+
 a { color: var(--text); }
 a:hover { color: var(--accent-hover); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -201,7 +206,7 @@ button:disabled { opacity: .5; cursor: default; }
 
 label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
 label.inline { flex-direction: row; align-items: center; justify-content: space-between; }
-input[type='text'], input[type='number'], input[type='password'] {
+input[type='text'], input[type='search'], input[type='number'], input[type='password'] {
   width: 100%;
   height: 36px;
   padding: 0 10px;
@@ -301,7 +306,8 @@ input::placeholder { color: var(--faint); }
 .list a.btn-sm.alt { background: var(--sunken); color: var(--text); border: 1.5px solid var(--border); }
 .list a.btn-sm.alt:hover { background: var(--raised); color: var(--text); }
 .list a.btn-sm.ghost { background: var(--raised); color: var(--muted); border: 1.5px solid var(--border); }
-.cr-toggle { height: 36px; flex: none; }
+.cr-toggle { flex: none; display: inline-flex; align-items: center; gap: 4px; }
+.cr-toggle .cr-icon { width: 13px; height: 13px; margin-right: 0; }
 
 /* Aviso en "Ahora viendo" cuando el anime también está en Crunchyroll */
 .cr-hint {
@@ -321,6 +327,152 @@ input::placeholder { color: var(--faint); }
 .cr-hint .cr-open { font-weight: 800; color: var(--accent-text); }
 .cr-hint:hover { background: var(--sunken); color: var(--muted); }
 .list a.btn-sm.ghost:hover { color: var(--text); }
+
+/* Seguir viendo: cada fila entera abre el siguiente episodio; lo que vas al día, aparte y más compacto */
+#continue { display: flex; flex-direction: column; gap: 12px; }
+.continue { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.c-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 8px 8px;
+  background: var(--raised);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.c-row:hover { background: var(--sunken); border-color: #3a3a41; color: var(--text); }
+.c-cover {
+  width: 48px;
+  height: 68px;
+  flex: none;
+  object-fit: cover;
+  background: var(--sunken);
+  border-radius: var(--radius-sm);
+}
+.c-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.c-title {
+  font-weight: 700;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.c-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; font-size: 12px; color: var(--faint); }
+.c-meta strong { color: var(--text); font-weight: 800; }
+/* [6 por ver][━━━━──────]: los episodios sin ver delante de la barra de progreso */
+.c-progress { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.c-progress .bar { flex: 1; margin-top: 0; }
+.c-pending {
+  flex: none;
+  padding: 0 5px;
+  border-radius: var(--radius-xs);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  white-space: nowrap;
+}
+.c-row .bar { height: 3px; margin-top: 2px; }
+.c-play {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  transition: transform 0.15s;
+}
+.c-row:hover .c-play { transform: scale(1.08); }
+/* Sin dónde verlo (solo la ficha de MAL): botón apagado */
+.c-play.mal { background: var(--sunken); color: var(--muted); font-size: 10px; font-weight: 800; }
+.upcoming .c-row { padding: 6px 10px; gap: 10px; background: none; }
+.upcoming .c-row:hover { background: var(--raised); }
+.upcoming .c-cover { width: 28px; height: 40px; }
+.upcoming .c-title { font-weight: 600; -webkit-line-clamp: 1; }
+
+/* Barra de filtros abajo. En el panel del bot ocupa su franja (70 px, con hueco a la izquierda para el bot, que
+   va encima, fuera del iframe) y se ve siempre; en el popup del icono va pegada abajo y solo si hay filtros. */
+.filter-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-top: 1.5px solid var(--divider);
+}
+html:not(.embedded) .filter-bar.empty { display: none; }
+html.embedded body { padding-bottom: 70px; }
+html.embedded .filter-bar { position: fixed; left: 0; right: 0; height: 70px; padding: 6px 12px 6px 76px; }
+.bar-group { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+/* Una sola fila de filtros; si no caben, se desliza en horizontal */
+.chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.chips .filter { flex: none; height: 26px; }
+.bar-row { display: flex; gap: 6px; }
+.bar-row input { flex: 1; min-width: 0; height: 26px; padding: 0 8px; font-size: 12px; }
+.bar-row .filter { height: 26px; }
+
+/* Temporada: ‹ Otoño 2026 › y una tarjeta por estreno, con tu estado o un botón para añadirlo */
+.season-nav { display: flex; align-items: center; justify-content: space-between; }
+.season-nav strong { font-size: 15px; font-weight: 800; }
+.season-nav .icon-btn { font-size: 22px; line-height: 1; color: var(--muted); }
+.s-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 8px;
+  background: var(--raised);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+}
+.s-row:hover { border-color: #3a3a41; }
+.s-link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; color: var(--text); text-decoration: none; }
+.s-link:hover { color: var(--text); }
+.s-link:hover .c-title { text-decoration: underline; }
+.s-row .chip { flex: none; }
+.s-add {
+  flex: none;
+  height: 30px;
+  padding: 0 10px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.s-add:hover { background: var(--accent-hover); }
+.s-add:disabled { opacity: 0.6; cursor: default; }
+
+/* Logo de Crunchyroll: insignia en la esquina de la portada y delante de "Disponible en Crunchyroll" */
+.cover-wrap { position: relative; flex: none; display: block; line-height: 0; }
+.cr-badge {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 20px;
+  height: 20px;
+  padding: 3px;
+  border-radius: 50%;
+  background: #f47521;
+  color: #fff;
+  box-shadow: 0 0 0 2px var(--raised);
+}
+.cr-badge svg, .cr-icon svg { display: block; width: 100%; height: 100%; }
+.upcoming .cr-badge { width: 15px; height: 15px; padding: 2px; right: -4px; bottom: -4px; }
+.mylist .cr-badge { box-shadow: 0 0 0 2px var(--surface); }
+.cr-hint-text { display: inline-flex; align-items: center; gap: 4px; }
+.cr-icon { width: 16px; height: 16px; margin-right: 4px; flex: none; color: #f47521; }
 
 .empty {
   padding: 18px 14px;

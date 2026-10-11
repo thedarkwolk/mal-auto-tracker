@@ -1,16 +1,40 @@
-// Abierto desde el panel ("…/search?q=…#malauto=<id>&t=<título>"): elige el resultado que corresponde
-// al anime de MAL, entra en la serie y le pasa el enlace al background para ir directo la próxima vez.
+// Abierto desde el panel con una marca (#malauto=<id>) para dar con la serie del anime de MAL, entrar en ella
+// y pasarle el enlace al background para ir directo la próxima vez. Dos casos:
+// - "…/watch/<episodio>#malauto=<id>": el enlace que da MAL a un episodio; la serie es la de ese episodio.
+// - "…/search?q=…#malauto=<id>&t=<título>&q=<otra búsqueda>…": elige el resultado que encaja con el título; si
+//   ninguno encaja, prueba la siguiente búsqueda (q) y, agotadas, da el anime por no disponible.
 (async () => {
   const marker = location.hash.match(/malauto=(\d+)/);
-  if (!marker || !location.pathname.includes('/search')) return;
+  if (!marker) return;
   const malId = Number(marker[1]);
-  const titles = new URLSearchParams(location.hash.slice(1)).getAll('t').filter(Boolean);
+  const params = new URLSearchParams(location.hash.slice(1));
   history.replaceState(null, '', location.pathname + location.search);
+  const found = async (url) => {
+    try {
+      await chrome.runtime.sendMessage({ type: 'crSeriesFound', malId, url });
+    } catch {}
+    location.replace(url);
+  };
+
+  if (/\/watch\//.test(location.pathname)) {
+    for (let i = 0; i < 40; i++) {
+      await new Promise((r) => setTimeout(r, 250));
+      const href = document.querySelector('a.show-title-link, a[data-t="show-title-link"]')?.getAttribute('href');
+      if (href && /\/series\//.test(href)) return found(new URL(href, location.origin).href);
+    }
+    return; // sin enlace a la serie: se queda en el episodio, que también vale
+  }
+  if (!location.pathname.includes('/search')) return;
+
+  const titles = params.getAll('t').filter(Boolean);
   const { similarity, stripSeason } = await import(chrome.runtime.getURL('src/matcher.js'));
   const wanted = [...new Set(titles.flatMap((t) => [t, stripSeason(t)]))];
 
+  // Se espera por tiempo, no por vueltas (en una pestaña en segundo plano los temporizadores van más lentos):
+  // sin ningún resultado en 6 s se da la búsqueda por vacía; con resultados que no encajan, a los 4 s.
   let best = null;
-  for (let i = 0; i < 40 && !best; i++) {
+  const start = Date.now();
+  while (!best && Date.now() - start < 6000) {
     await new Promise((r) => setTimeout(r, 250));
     const links = [...document.querySelectorAll('a[href*="/series/"]')].filter((a) =>
       /search-show-card/.test(a.className),
@@ -28,21 +52,26 @@
     }
     const [href, score] = [...scores].sort((a, b) => b[1] - a[1])[0] || [];
     if (href && score >= 0.7) best = new URL(href, location.origin).href;
-    else if (i > 16) break; // hay resultados pero ninguno encaja
+    else if (Date.now() - start > 4000) break; // hay resultados pero ninguno encaja
   }
 
-  if (best) {
-    try {
-      await chrome.runtime.sendMessage({ type: 'crSeriesFound', malId, url: best });
-    } catch {}
-    location.replace(best);
-  } else {
-    // MAL lo enlaza pero Crunchyroll (en tu región) no lo tiene: deja de tener prioridad.
-    try {
-      await chrome.runtime.sendMessage({ type: 'crSeriesMissing', malId });
-    } catch {}
-    MALAuto.toast(`No he encontrado "${titles[0]}" en Crunchyroll: te dejo la búsqueda.`, 'warn');
+  if (best) return found(best);
+
+  // Otra búsqueda pendiente: se prueba con la misma marca, quitando la que se va a usar.
+  const [next, ...rest] = params.getAll('q');
+  if (next) {
+    const hash = new URLSearchParams([['malauto', malId], ...titles.map((t) => ['t', t]), ...rest.map((q) => ['q', q])]);
+    const url = new URL(location.href);
+    url.searchParams.set('q', next);
+    url.hash = hash.toString();
+    return location.replace(url.href);
   }
+
+  // Ninguna búsqueda lo encuentra: deja de tener prioridad hasta que se vuelva a comprobar en MAL.
+  try {
+    await chrome.runtime.sendMessage({ type: 'crSeriesMissing', malId });
+  } catch {}
+  MALAuto.toast(`No he encontrado "${titles[0]}" en Crunchyroll: te dejo la búsqueda.`, 'warn');
 })();
 
 // https://www.crunchyroll.com/es/watch/G0DUND0K2/the-journeys-end

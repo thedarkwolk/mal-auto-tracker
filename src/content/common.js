@@ -121,6 +121,8 @@
   // El bot (la mascota) y el panel van en una misma tarjeta fija abajo a la izquierda. Cerrada solo se ve el bot;
   // al pulsarlo da un salto y el panel crece desde él como un círculo hasta llenar la tarjeta, con el bot
   // dentro en su esquina. La tarjeta ocupa siempre su sitio pero sin recoger clics: solo el bot y el panel abierto.
+  // El panel llena la tarjeta; su franja de abajo (la barra de filtros) deja hueco a la izquierda para el bot,
+  // que va encima.
   // Centro de la bola en la tarjeta: x = 8 + 56/2; y (desde abajo) = 6 + alto del bot × (1 − 72/130).
   const BALL = 'at 36px calc(100% - 33px)';
 
@@ -138,7 +140,7 @@
     if (!mascotHost) {
       mascotHost = document.createElement('div');
       mascotHost.style.cssText =
-        'position:fixed;left:8px;bottom:10px;width:min(380px,calc(100vw - 16px));height:min(680px,calc(100vh - 20px));' +
+        'position:fixed;left:8px;bottom:10px;width:min(440px,calc(100vw - 16px));height:min(680px,calc(100vh - 20px));' +
         'z-index:2147483646;pointer-events:none;';
       const root = mascotHost.attachShadow({ mode: 'open' });
       root.innerHTML = `<style>
@@ -149,7 +151,7 @@
                transition:clip-path .35s cubic-bezier(.4,0,.2,1),visibility 0s .35s}
         .open .sheet{clip-path:circle(150% ${BALL});visibility:visible;pointer-events:auto;
                transition:clip-path .5s cubic-bezier(.3,.7,.2,1) .12s,visibility 0s .12s}
-        .panel{display:block;width:100%;height:calc(100% - 70px);border:0;border-bottom:1.5px solid #1c1c20;color-scheme:dark}
+        .panel{display:block;width:100%;height:100%;border:0;color-scheme:dark}
         button{all:unset;cursor:pointer;border-radius:50%}
         button:focus-visible{outline:2px solid #ececef;outline-offset:2px}
         ${globalThis.MALMascot.css}
