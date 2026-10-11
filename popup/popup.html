@@ -23,7 +23,7 @@
   <div id="viewList" role="tabpanel" aria-labelledby="tabList" hidden>
     <section>
       <p id="listInfo" class="small" hidden></p>
-      <ul id="myList" class="list mylist" hidden></ul>
+      <ul id="myList" class="continue" hidden></ul>
     </section>
   </div>
 
@@ -33,6 +33,11 @@
         <button id="seasonPrev" class="icon-btn" aria-label="Temporada anterior">‹</button>
         <strong id="seasonName"></strong>
         <button id="seasonNext" class="icon-btn" aria-label="Temporada siguiente">›</button>
+        <select id="seasonSort" class="sort" aria-label="Ordenar">
+          <option value="popular">Más populares</option>
+          <option value="score">Mejor nota</option>
+          <option value="next">Próximos episodios</option>
+        </select>
       </div>
       <p id="seasonInfo" class="small" hidden></p>
       <ul id="seasonList" class="continue" hidden></ul>

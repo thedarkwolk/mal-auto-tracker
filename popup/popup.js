@@ -387,7 +387,7 @@ function setView(v) {
   // Los filtros de cada pestaña van en la barra de abajo (la franja del bot)
   $('#listBar').hidden = v !== 'list';
   $('#seasonBar').hidden = v !== 'season';
-  $('#filterBar').classList.toggle('empty', v === 'now');
+  $('#filterBar').classList.toggle('no-filters', v === 'now');
   if (v === 'list') loadList().catch(showError);
   if (v === 'season') loadSeason().catch(showError);
 }
@@ -510,20 +510,13 @@ function crPage(item) {
   return crSearchUrl(item);
 }
 
-// Prioridad al abrir: Crunchyroll > la web donde lo estabas viendo > ficha de MAL.
+// Dónde abrir un anime, por prioridad: Crunchyroll > la web donde lo estabas viendo > ficha de MAL (where: null).
 function openAction(item, malUrl) {
   const crUrl =
     (item.site === 'crunchyroll' && item.watchUrl) || item.crUrl || (item.crunchyroll ? crPage(item) : null);
-  if (crUrl) return { url: crUrl, label: 'Crunchyroll', cls: 'btn-sm', where: 'Crunchyroll' };
-  if (item.watchUrl) {
-    return {
-      url: item.watchUrl,
-      label: item.nextEpisode ? `Ver ep. ${item.nextEpisode}` : 'Abrir',
-      cls: 'btn-sm alt',
-      where: data.sites[item.site] || item.site,
-    };
-  }
-  return { url: malUrl, label: 'MAL', cls: 'btn-sm ghost', where: null };
+  if (crUrl) return { url: crUrl, where: 'Crunchyroll' };
+  if (item.watchUrl) return { url: item.watchUrl, where: data.sites[item.site] || item.site };
+  return { url: malUrl, where: null };
 }
 
 // ---------- Seguir viendo: lo que tienes a medias en MAL, en "Ahora viendo" cuando la pestaña no tiene episodio.
@@ -679,10 +672,53 @@ function renderContinue() {
   );
 }
 
+// Una tarjeta de Mi lista, como las de "Seguir viendo": entera abre dónde verlo (o la ficha de MAL). Los completados
+// no tienen nada que ver: abren su ficha y llevan un ✓ en vez del play.
+function listRow(item) {
+  const malUrl = `https://myanimelist.net/anime/${item.id}`;
+  const done = item.status === 'completed';
+  const open = done ? { url: malUrl, where: null } : openAction(item, malUrl);
+  const pct = item.numEpisodes ? Math.min(100, (item.watched / item.numEpisodes) * 100) : 0;
+  let side;
+  if (done) side = el('span', { class: 'c-play done', title: 'Completado' }, '✓');
+  else if (open.where) {
+    side = el('span', { class: 'c-play' });
+    side.innerHTML = PLAY_ICON;
+  } else side = el('span', { class: 'c-play mal' }, 'MAL');
+  return el(
+    'li',
+    {},
+    el(
+      'a',
+      {
+        class: 'c-row',
+        href: open.url,
+        target: '_blank',
+        title: open.where ? `Ver el episodio ${item.watched + 1} en ${open.where}` : `${item.title} en MyAnimeList`,
+      },
+      cover(item),
+      el(
+        'span',
+        { class: 'c-info' },
+        el('span', { class: 'c-title' }, item.title),
+        el(
+          'span',
+          { class: 'c-meta' },
+          el('strong', {}, String(item.watched)),
+          el('span', {}, `de ${item.numEpisodes || '?'}`),
+          item.score > 0 && el('span', { class: 'c-score', title: 'Tu nota en MAL' }, `★ ${item.score}`),
+        ),
+        item.numEpisodes > 0 && el('span', { class: 'c-progress' }, el('span', { class: 'bar' }, el('span', { style: `width: ${pct}%` }))),
+      ),
+      side,
+    ),
+  );
+}
+
 function renderList() {
   const q = $('#listFilter').value.trim().toLowerCase();
   const items = listItems.filter(
-    (i) => (!q || i.title.toLowerCase().includes(q)) && (!onlyCR || i.crunchyroll || i.site === 'crunchyroll'),
+    (i) => (!q || i.title.toLowerCase().includes(q)) && (!onlyCR || onCrunchyroll(i)),
   );
   const checking = listItems.some((i) => i.crunchyroll === undefined);
   const info = $('#listInfo');
@@ -692,30 +728,7 @@ function renderList() {
     (items.length ? `${items.length} ${items.length === 1 ? 'anime' : 'animes'}` : 'Nada por aquí.') +
     (checking ? ' · comprobando Crunchyroll…' : '');
   ul.hidden = !items.length;
-  ul.replaceChildren(
-    ...items.map((item) => {
-      const pct = item.numEpisodes ? Math.min(100, (item.watched / item.numEpisodes) * 100) : 0;
-      const malUrl = `https://myanimelist.net/anime/${item.id}`;
-      const open = openAction(item, malUrl);
-      return el(
-        'li',
-        {},
-        withCrBadge(item, item.picture ? el('img', { class: 'thumb', src: item.picture, alt: '' }) : el('div', { class: 'thumb' })),
-        el(
-          'div',
-          { class: 'info' },
-          el('a', { href: malUrl, target: '_blank', title: `${item.title} en MyAnimeList` }, item.title),
-          el(
-            'span',
-            { class: 'small' },
-            `${item.watched}/${item.numEpisodes || '?'}${open.where ? ` · ${open.where}` : ''}`,
-          ),
-          item.numEpisodes > 0 && el('div', { class: 'bar' }, el('span', { style: `width: ${pct}%` })),
-        ),
-        el('a', { class: open.cls, href: open.url, target: '_blank' }, open.label),
-      );
-    }),
-  );
+  ul.replaceChildren(...items.map(listRow));
 }
 
 // ---------- Temporada: los estrenos de una temporada en MAL, con tu estado en la lista y dónde verlos.
@@ -834,6 +847,29 @@ function seasonSide(item) {
   );
 }
 
+const compact = new Intl.NumberFormat('es-ES', { notation: 'compact', maximumFractionDigits: 1 });
+
+// Fecha de estreno de MAL ("2026-10-03", o solo "2026-10" si aún no hay día) → "Empieza el 3 oct" / "Empieza en oct".
+function startsOn(date) {
+  const [y, m, d] = date.split('-').map(Number);
+  if (!m) return `Empieza en ${y}`;
+  const month = new Date(y, m - 1, d || 1).toLocaleDateString('es-ES', { month: 'short' }).replace('.', '');
+  return d ? `Empieza el ${d} ${month}` : `Empieza en ${month}`;
+}
+
+// Orden de la lista: el de MAL (popularidad), por nota o por lo que sale antes (episodio o estreno).
+const SEASON_SORTS = {
+  popular: null,
+  score: (a, b) => (b.mean ?? -1) - (a.mean ?? -1),
+  next: (a, b) => nextAt(a) - nextAt(b),
+};
+function nextAt(item) {
+  if (item.next) return item.next.at;
+  if (item.startDate) return new Date(item.startDate).getTime();
+  return Infinity;
+}
+let seasonSort = SEASON_SORTS[store.get('seasonSort')] !== undefined ? store.get('seasonSort') : 'popular';
+
 function seasonRow(item) {
   const malUrl = `https://myanimelist.net/anime/${item.id}`;
   const meta = [
@@ -843,6 +879,9 @@ function seasonRow(item) {
   ]
     .filter(Boolean)
     .join(' · ');
+  // Debajo, cada uno en su línea: cuándo sale el siguiente episodio (o cuándo se estrena) y cuánta gente lo sigue.
+  const when = item.next ? `Ep. ${item.next.episode} ${airDate(item.next.at)}` : item.startDate ? startsOn(item.startDate) : null;
+  const members = item.members ? `${compact.format(item.members)} miembros` : null;
   return el(
     'li',
     { class: 's-row' },
@@ -855,7 +894,8 @@ function seasonRow(item) {
         { class: 'c-info' },
         el('span', { class: 'c-title' }, item.title),
         el('span', { class: 'c-meta' }, meta),
-        item.next && el('span', { class: 'c-meta' }, `Ep. ${item.next.episode} ${airDate(item.next.at)}`),
+        when && el('span', { class: 'c-meta c-when' }, when),
+        members && el('span', { class: 'c-meta' }, members),
       ),
     ),
     seasonSide(item),
@@ -868,6 +908,7 @@ function renderSeason() {
       (seasonFilter === 'all' || (seasonFilter === 'new' ? !i.listStatus : !!i.listStatus)) &&
       (!seasonOnlyCR || onCrunchyroll(i)),
   );
+  if (SEASON_SORTS[seasonSort]) items.sort(SEASON_SORTS[seasonSort]);
   const checking = seasonItems.some((i) => i.crunchyroll === undefined);
   const info = $('#seasonInfo');
   info.hidden = false;
@@ -884,6 +925,12 @@ $('#tabList').addEventListener('click', () => setView('list'));
 $('#tabSeason').addEventListener('click', () => setView('season'));
 $('#seasonPrev').addEventListener('click', () => moveSeason(-1));
 $('#seasonNext').addEventListener('click', () => moveSeason(1));
+$('#seasonSort').value = seasonSort;
+$('#seasonSort').addEventListener('change', (e) => {
+  seasonSort = e.target.value;
+  store.set('seasonSort', seasonSort);
+  if (seasonItems) renderSeason();
+});
 $('#listFilter').addEventListener('input', () => listItems && renderList());
 $('#onlyCR').setAttribute('aria-pressed', String(onlyCR));
 crToggle($('#onlyCR'));

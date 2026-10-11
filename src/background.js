@@ -340,7 +340,10 @@ async function getSeasonList(year, season) {
         numEpisodes: node.num_episodes || 0,
         mediaType: node.media_type,
         mean: node.mean || null,
+        members: node.num_list_users || 0,
         onAir: node.status === 'currently_airing',
+        // Aún sin estrenar: la fecha de estreno (puede venir solo con año y mes)
+        startDate: node.status === 'not_yet_aired' ? node.start_date || null : null,
         listStatus: ls?.status || null,
         watched: ls?.num_episodes_watched || 0,
         crunchyroll: streamFresh(stream) ? stream.crunchyroll && !crMissingNow(stream) : undefined,
@@ -369,6 +372,7 @@ async function getMyList(status) {
       numEpisodes: total,
       watched,
       status: ls?.status,
+      score: ls?.score || 0,
       site: link?.site || null,
       watchUrl: watchUrl(link, watched, total),
       nextEpisode: link?.template && (!total || watched < total) ? watched + 1 : null,

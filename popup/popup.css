@@ -276,36 +276,6 @@ input::placeholder { color: var(--faint); }
 }
 .filter:hover { color: var(--text); }
 .filter[aria-pressed='true'] { background: var(--accent); color: var(--accent-ink); }
-.mylist li { gap: 10px; padding: 8px 10px; }
-.mylist .thumb {
-  width: 40px;
-  height: 56px;
-  flex: none;
-  object-fit: cover;
-  background: var(--sunken);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-xs);
-}
-.mylist .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.mylist .bar { height: 5px; margin-top: 2px; }
-.list a.btn-sm {
-  flex: none;
-  height: 32px;
-  padding: 0 10px;
-  display: inline-grid;
-  place-items: center;
-  background: var(--accent);
-  color: var(--accent-ink);
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-.list a.btn-sm:hover { background: var(--accent-hover); color: var(--accent-ink); }
-/* Web de siempre (JKAnime, AnimeFLV…): por debajo de Crunchyroll en prioridad */
-.list a.btn-sm.alt { background: var(--sunken); color: var(--text); border: 1.5px solid var(--border); }
-.list a.btn-sm.alt:hover { background: var(--raised); color: var(--text); }
-.list a.btn-sm.ghost { background: var(--raised); color: var(--muted); border: 1.5px solid var(--border); }
 .cr-toggle { flex: none; display: inline-flex; align-items: center; gap: 4px; }
 .cr-toggle .cr-icon { width: 13px; height: 13px; margin-right: 0; }
 
@@ -326,7 +296,6 @@ input::placeholder { color: var(--faint); }
 .cr-hint strong { color: var(--text); }
 .cr-hint .cr-open { font-weight: 800; color: var(--accent-text); }
 .cr-hint:hover { background: var(--sunken); color: var(--muted); }
-.list a.btn-sm.ghost:hover { color: var(--text); }
 
 /* Seguir viendo: cada fila entera abre el siguiente episodio; lo que vas al día, aparte y más compacto */
 #continue { display: flex; flex-direction: column; gap: 12px; }
@@ -390,8 +359,13 @@ input::placeholder { color: var(--faint); }
   transition: transform 0.15s;
 }
 .c-row:hover .c-play { transform: scale(1.08); }
-/* Sin dónde verlo (solo la ficha de MAL): botón apagado */
-.c-play.mal { background: var(--sunken); color: var(--muted); font-size: 10px; font-weight: 800; }
+/* Sin dónde verlo: abre la ficha de MAL, con el azul de MyAnimeList */
+.c-play.mal { background: #2e51a2; color: #fff; font-size: 10px; font-weight: 800; }
+/* Completado: un ✓ apagado en vez del play */
+.c-play.done { background: none; border: 1.5px solid var(--border); color: var(--muted); font-size: 14px; font-weight: 800; }
+.c-row:hover .c-play.done { transform: none; }
+.c-score { color: var(--text); font-weight: 700; }
+.c-when { color: var(--text); font-weight: 700; }
 .upcoming .c-row { padding: 6px 10px; gap: 10px; background: none; }
 .upcoming .c-row:hover { background: var(--raised); }
 .upcoming .c-cover { width: 28px; height: 40px; }
@@ -409,7 +383,7 @@ input::placeholder { color: var(--faint); }
   background: var(--surface);
   border-top: 1.5px solid var(--divider);
 }
-html:not(.embedded) .filter-bar.empty { display: none; }
+html:not(.embedded) .filter-bar.no-filters { display: none; }
 html.embedded body { padding-bottom: 70px; }
 html.embedded .filter-bar { position: fixed; left: 0; right: 0; height: 70px; padding: 6px 12px 6px 76px; }
 .bar-group { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -421,7 +395,21 @@ html.embedded .filter-bar { position: fixed; left: 0; right: 0; height: 70px; pa
 .bar-row .filter { height: 26px; }
 
 /* Temporada: ‹ Otoño 2026 › y una tarjeta por estreno, con tu estado o un botón para añadirlo */
-.season-nav { display: flex; align-items: center; justify-content: space-between; }
+.season-nav { display: flex; align-items: center; gap: 2px; }
+.season-nav strong { min-width: 112px; text-align: center; }
+.sort {
+  margin-left: auto;
+  height: 30px;
+  padding: 0 8px;
+  background: var(--raised);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
 .season-nav strong { font-size: 15px; font-weight: 800; }
 .season-nav .icon-btn { font-size: 22px; line-height: 1; color: var(--muted); }
 .s-row {
@@ -440,18 +428,18 @@ html.embedded .filter-bar { position: fixed; left: 0; right: 0; height: 70px; pa
 .s-row .chip { flex: none; }
 .s-add {
   flex: none;
-  height: 30px;
+  height: 28px;
   padding: 0 10px;
-  background: var(--accent);
-  color: var(--accent-ink);
-  border: 0;
+  background: none;
+  color: var(--text);
+  border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
   cursor: pointer;
 }
-.s-add:hover { background: var(--accent-hover); }
+.s-add:hover { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .s-add:disabled { opacity: 0.6; cursor: default; }
 
 /* Logo de Crunchyroll: insignia en la esquina de la portada y delante de "Disponible en Crunchyroll" */
@@ -470,7 +458,6 @@ html.embedded .filter-bar { position: fixed; left: 0; right: 0; height: 70px; pa
 }
 .cr-badge svg, .cr-icon svg { display: block; width: 100%; height: 100%; }
 .upcoming .cr-badge { width: 15px; height: 15px; padding: 2px; right: -4px; bottom: -4px; }
-.mylist .cr-badge { box-shadow: 0 0 0 2px var(--surface); }
 .cr-hint-text { display: inline-flex; align-items: center; gap: 4px; }
 .cr-icon { width: 16px; height: 16px; margin-right: 4px; flex: none; color: #f47521; }
 

@@ -163,7 +163,7 @@ export async function getAnime(id, { fresh = false } = {}) {
 // Animes de una temporada (season: winter, spring, summer o fall), de más a menos populares. Con sesión, cada uno
 // trae tu estado en la lista (my_list_status). Incluye los que siguen emitiéndose de temporadas anteriores.
 const SEASON_FIELDS =
-  'alternative_titles,num_episodes,media_type,main_picture,mean,num_list_users,start_season,status,my_list_status';
+  'alternative_titles,num_episodes,media_type,main_picture,mean,num_list_users,start_season,start_date,status,my_list_status';
 export async function getSeason(year, season) {
   const params = new URLSearchParams({ sort: 'anime_num_list_users', limit: 300, nsfw: 'true', fields: SEASON_FIELDS });
   const data = await api(`/anime/season/${year}/${season}?${params}`);
