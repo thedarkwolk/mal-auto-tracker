@@ -1,30 +1,17 @@
 // Mascota de MAL Auto (el bot): la bola de bloub (github.com/jeremy-prt/bloub, MIT), de un solo color.
 // Cara según data-mood: idle (normal, también viendo un episodio) · excited (episodio acabado, bota).
-// Color según data-tone: black (bola negra, para webs claras) · white (bola blanca, para webs oscuras).
-// excited es una imagen (mascot/excited-<tone>.svg) que solo anima los ojos. idle va metida en la página como SVG
-// (MALMascot.mount) para poder mover sus ojos: siguen al cursor. El bote del cuerpo va por CSS.
+// Color según data-tone: black (bola negra, para webs claras) · white (bola blanca, para webs oscuras); y mientras
+// se ve un aviso, el del aviso (data-alert: ok verde · info azul · warn ámbar · error rojo).
+// Las dos caras (mascot/<cara>-black.svg) van metidas en la página como SVG (MALMascot.mount) para poder cambiarles
+// el color por CSS y, en idle, mover los ojos: siguen al cursor. El bote del cuerpo va por CSS.
 // Script clásico (no módulo) para usarlo en las webs.
 (() => {
   if (globalThis.MALMascot) return;
 
-  const IMG_MOODS = ['excited'];
-  const TONES = ['black', 'white'];
+  const FACES = ['idle', 'excited'];
   const url = (face) => globalThis.chrome?.runtime?.getURL?.(`mascot/${face}.svg`) || `../mascot/${face}.svg`;
 
-  const svg = `<span class="m-body"><span class="m-face" data-face="idle"></span>${IMG_MOODS.flatMap((m) =>
-    TONES.map((t) => `<img class="m-face" data-face="${m}-${t}" src="${url(`${m}-${t}`)}" alt="" draggable="false">`),
-  ).join('')}</span>`;
-
-  // Se ve la cara del humor y tono actuales; sin atributos, idle en negro. idle es una sola: el tono va por CSS.
-  const faces = [
-    `.mal-mascot${IMG_MOODS.map((m) => `:not([data-mood='${m}'])`).join('')} .m-face[data-face='idle'] { display: block; }`,
-    ...IMG_MOODS.flatMap((m) =>
-      TONES.map((t) => {
-        const tone = t === 'black' ? `:not([data-tone='white'])` : `[data-tone='white']`;
-        return `.mal-mascot[data-mood='${m}']${tone} .m-face[data-face='${m}-${t}'] { display: block; }`;
-      }),
-    ),
-  ].join('\n');
+  const svg = `<span class="m-body">${FACES.map((f) => `<span class="m-face" data-face="${f}"></span>`).join('')}</span>`;
 
   const css = `
 .mal-mascot { --m-size: 84px; position: relative; display: inline-block; width: var(--m-size); height: calc(var(--m-size) * 130 / 120); }
@@ -33,16 +20,23 @@
    centrada en (60, 72) y radio 40, eso es una caja de 100×100 unidades con la esquina en (10, 22). */
 .mal-mascot .m-body { position: absolute; left: 8.333%; top: 16.923%; width: 83.333%; height: 76.923%; }
 .mal-mascot .m-face { display: none; width: 100%; height: 100%; pointer-events: none; user-select: none; }
-${faces}
-
-/* idle en línea: colores por tono y la mirada llevada hacia el cursor (--gx/--gy, en unidades del dibujo) */
+.mal-mascot:not([data-mood='excited']) .m-face[data-face='idle'] { display: block; }
+.mal-mascot[data-mood='excited'] .m-face[data-face='excited'] { display: block; }
 .mal-mascot .m-face svg { display: block; width: 100%; height: 100%; }
-.mal-mascot .m-ink { fill: #0a0a0c; }
-.mal-mascot .m-paper { fill: #f4f4f5; }
-.mal-mascot[data-tone='white'] .m-ink { fill: #f4f4f5; }
-.mal-mascot[data-tone='white'] .m-paper { fill: #0a0a0c; }
+
+/* Colores: bola (--m-ink) y ojos (--m-paper). Por tono de la web y, mientras hay un aviso, el suyo. */
+.mal-mascot { --m-ink: #0a0a0c; --m-paper: #f4f4f5; }
+.mal-mascot[data-tone='white'] { --m-ink: #f4f4f5; --m-paper: #0a0a0c; }
+.mal-mascot[data-alert='ok'] { --m-ink: #3ecf8e; --m-paper: #f4f4f5; }
+.mal-mascot[data-alert='info'] { --m-ink: #3b93f0; --m-paper: #f4f4f5; }
+.mal-mascot[data-alert='warn'] { --m-ink: #f0b429; --m-paper: #f4f4f5; }
+.mal-mascot[data-alert='error'] { --m-ink: #e8483f; --m-paper: #f4f4f5; }
+.mal-mascot .m-ink { fill: var(--m-ink); transition: fill 0.4s var(--m-ease); }
+.mal-mascot .m-paper { fill: var(--m-paper); transition: fill 0.4s var(--m-ease); }
+
 /* Curva suave para todo lo de los ojos: arranca rápido y se posa despacio, sin rebote */
 .mal-mascot { --m-ease: cubic-bezier(0.22, 0.61, 0.36, 1); }
+/* idle: la mirada llevada hacia el cursor (--gx/--gy, en unidades del dibujo) */
 .mal-mascot .m-gaze, .mal-mascot .m-eyes { transform-box: view-box; transform-origin: 0 0; }
 .mal-mascot .m-gaze { transform: translate(var(--gx, 0px), var(--gy, 0px)); transition: transform 0.45s var(--m-ease); }
 /* Al acercarse el cursor (--eo: 0 nada, 1 encima) los ojos de bloub crecen desde su punto medio (--cx/--cy)… */
@@ -84,7 +78,7 @@ ${faces}
   .mal-mascot * { animation: none !important; transition: none !important; }
 }`;
 
-  // ---------- idle en línea con mirada que sigue al cursor
+  // ---------- Caras en línea
 
   // Hasta dónde se alejan los ojos del centro al mirar, en unidades del dibujo (la bola mide 100 de radio; así
   // caben enteros en cualquier dirección), y a qué distancia del bot (px de pantalla) ya miran del todo al cursor.
@@ -110,43 +104,50 @@ ${faces}
     /@keyframes oeil1\{0%\{transform:matrix\(([^)]+)\)/,
   ];
 
-  // Promesa con el SVG de idle ya preparado y dónde tiene los ojos en reposo (el punto medio entre los dos;
-  // Neutral los lleva arriba a la derecha). Compartida por todos los bots de la página.
-  let idleSvg;
-  function loadIdle() {
-    idleSvg ??= fetch(url('idle-black')).then((r) => r.text()).then((text) => {
-      const body = text.match(/<\/defs><path d="[^"]+"/)?.[0];
-      const eyes = text.match(/<g clip-path="url\(#cuerpo\)" fill="#[0-9a-f]+">([\s\S]*?)<\/g>/);
-      const at = FIRST_FRAME.map((re) => text.match(re)?.[1].split(',').map(Number));
-      if (!body || !eyes || at.some((m) => m?.length !== 6)) throw new Error('SVG de idle inesperado');
-      const rest = [(at[0][4] + at[1][4]) / 2, (at[0][5] + at[1][5]) / 2];
+  // Prepara el SVG de una cara para meterlo en la página: la bola y los ojos pasan a colorearse por CSS (m-ink,
+  // m-paper) y, en idle, los ojos se envuelven para poder llevarlos hacia el cursor y abrirlos. Como las dos caras
+  // conviven en la misma página, los nombres que repiten (el recorte "cuerpo" y las animaciones "oeil") llevan delante
+  // el de la cara. Devuelve también, para idle, dónde tiene los ojos en reposo (el punto medio entre los dos;
+  // Neutral los lleva arriba a la derecha).
+  function prepareFace(face, text) {
+    const body = text.match(/<\/defs><path d="[^"]+"/)?.[0];
+    const eyes = text.match(/<g clip-path="url\(#cuerpo\)" fill="#[0-9a-f]+">([\s\S]*?)<\/g>/);
+    const at = FIRST_FRAME.map((re) => text.match(re)?.[1].split(',').map(Number));
+    if (!body || !eyes || at.some((m) => m?.length !== 6)) throw new Error(`SVG de ${face} inesperado`);
+    const rest = [(at[0][4] + at[1][4]) / 2, (at[0][5] + at[1][5]) / 2];
+    let inner = eyes[1];
+    if (face === 'idle') {
       // Los ojos abiertos, con su mismo punto medio que los de reposo. Cada uno en su <g> para el parpadeo (una
       // animación CSS de transform pisaría la matrix del propio ojo).
       const mid = [(WIDE_AT[0][4] + WIDE_AT[1][4]) / 2, (WIDE_AT[0][5] + WIDE_AT[1][5]) / 2];
       const wide = WIDE_AT.map(([a, b, c, d, x, y]) => {
-        const at = [a, b, c, d, (x - mid[0] + rest[0]).toFixed(2), (y - mid[1] + rest[1]).toFixed(2)];
-        return `<g class="m-blink"><path d="${WIDE_EYE}" transform="matrix(${at.join(',')})"/></g>`;
+        const m = [a, b, c, d, (x - mid[0] + rest[0]).toFixed(2), (y - mid[1] + rest[1]).toFixed(2)];
+        return `<g class="m-blink"><path d="${WIDE_EYE}" transform="matrix(${m.join(',')})"/></g>`;
       }).join('');
-      const markup = text
-        .replace(body, `${body} class="m-ink"`)
-        .replace(/(<\/defs><path d="[^"]+" class="m-ink") fill="#[0-9a-f]+"/, '$1')
-        .replace(
-          eyes[0],
-          () =>
-            `<g clip-path="url(#cuerpo)" class="m-paper"><g class="m-gaze"><g class="m-eyes">${eyes[1]}</g>` +
-            `<g class="m-wide">${wide}</g></g></g>`,
-        )
-        .replace(/ width="250" height="250"/, ' aria-hidden="true"');
-      return { markup, rest };
-    });
-    return idleSvg;
+      inner = `<g class="m-gaze"><g class="m-eyes">${eyes[1]}</g><g class="m-wide">${wide}</g></g>`;
+    }
+    const markup = text
+      .replace(body, `${body} class="m-ink"`)
+      .replace(/(<\/defs><path d="[^"]+" class="m-ink") fill="#[0-9a-f]+"/, '$1')
+      .replace(eyes[0], () => `<g clip-path="url(#cuerpo)" class="m-paper">${inner}</g>`)
+      .replace(/ width="250" height="250"/, ' aria-hidden="true"')
+      .replace(/\bcuerpo\b/g, `${face}-cuerpo`)
+      .replace(/\boeil(\d)/g, `${face}-oeil$1`);
+    return { markup, rest };
   }
 
-  // Mete la cara idle en el bot y hace que su mirada siga al cursor mientras está en idle.
+  // Promesas con cada cara ya preparada, compartidas por todos los bots de la página.
+  const faces = {};
+  const loadFace = (face) =>
+    (faces[face] ??= fetch(url(`${face}-black`)).then((r) => r.text()).then((text) => prepareFace(face, text)));
+
+  // Mete las caras en el bot y hace que, en idle, su mirada siga al cursor.
   async function mount(bot) {
+    const [idle, excited] = await Promise.all(FACES.map(loadFace));
+    bot.querySelector(".m-face[data-face='excited']").innerHTML = excited.markup;
     const slot = bot.querySelector(".m-face[data-face='idle']");
-    const { markup, rest } = await loadIdle();
-    slot.innerHTML = markup;
+    slot.innerHTML = idle.markup;
+    const { rest } = idle;
     const gaze = slot.querySelector('.m-gaze');
     const face = bot.querySelector('.m-body');
     gaze.style.setProperty('--cx', `${rest[0]}px`);
@@ -158,7 +159,7 @@ ${faces}
     const update = () => {
       frame = 0;
       // Solo mira al cursor en idle y con el panel cerrado (abierto, el bot está dentro del panel y no hace falta).
-      const follow = !IMG_MOODS.includes(bot.dataset.mood) && bot.getAttribute('aria-expanded') !== 'true';
+      const follow = bot.dataset.mood !== 'excited' && bot.getAttribute('aria-expanded') !== 'true';
       // Sin seguir, los ojos se quedan donde los pone bloub. Siguiendo, su punto medio va hacia el cursor,
       // tanto más lejos del centro de la bola cuanto más lejos está el cursor.
       // Y cuanto más cerca está el cursor, más abre los ojos.

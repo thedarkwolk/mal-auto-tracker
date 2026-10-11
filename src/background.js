@@ -400,19 +400,23 @@ async function markTab(tabId, { manual }) {
   if (state.marked && !manual) return state;
 
   if (!(await mal.getUser())) {
-    toast(tabId, 'MAL Auto Tracker: conecta tu cuenta de MyAnimeList desde el icono de la extensión.', 'warn');
+    toast(tabId, { kind: 'warn', title: 'Conecta tu cuenta de MyAnimeList', text: 'Pulsa aquí y conéctala desde el panel.', fix: true });
     return state;
   }
 
   state = { ...state, ...(await resolveCached(state.info)) };
   if (state.phase !== 'matched') {
+    // Todos se arreglan desde el panel: pulsar el aviso lo abre.
     const msg = {
-      lowConfidence: `No estoy seguro de qué anime es "${state.info.title}". Confírmalo desde el icono de la extensión.`,
-      notFound: `No encontré "${state.info.title}" en MyAnimeList. Asígnalo desde el icono de la extensión.`,
-      outOfRange: `El episodio ${state.info.episode} no encaja con "${state.anime?.title}". Corrígelo desde el icono de la extensión.`,
-      error: `Error con MyAnimeList: ${state.error}`,
+      lowConfidence: { title: '¿Qué anime es?', text: `No estoy seguro de que sea "${state.info.title}". Pulsa aquí y elígelo.` },
+      notFound: { title: 'No lo encuentro en MyAnimeList', text: `"${state.info.title}". Pulsa aquí y asígnalo.` },
+      outOfRange: {
+        title: 'Ese episodio no encaja',
+        text: `El ${state.info.episode} no cuadra con "${state.anime?.title}". Pulsa aquí y corrígelo.`,
+      },
+      error: { title: 'Error con MyAnimeList', text: String(state.error) },
     }[state.phase];
-    if (msg) toast(tabId, msg, 'warn');
+    if (msg) toast(tabId, { kind: 'warn', fix: true, ...msg });
     state.marked = true; // no insistir en cada timeupdate
     await setTab(tabId, state);
     return state;
@@ -427,10 +431,23 @@ async function markTab(tabId, { manual }) {
 
   if (ls?.status === 'completed' && !ls.is_rewatching) {
     result = 'alreadyCompleted';
-    toast(tabId, `"${anime.title}" ya está completado en tu lista. Si es otra temporada, corrígelo desde el icono de la extensión.`, 'info');
+    toast(tabId, {
+      kind: 'info',
+      title: 'Ya lo tenías completado',
+      text: `"${anime.title}". Si es otra temporada, pulsa aquí y corrígelo.`,
+      picture: anime.main_picture?.medium,
+      fix: true,
+    });
   } else if (ls && ls.num_episodes_watched >= ep) {
     result = 'alreadyWatched';
-    if (manual) toast(tabId, `"${anime.title}" ya tenía el episodio ${ls.num_episodes_watched} marcado.`, 'info');
+    if (manual) {
+      toast(tabId, {
+        kind: 'info',
+        title: 'Ya estaba marcado',
+        text: `${anime.title} · episodio ${ls.num_episodes_watched}`,
+        picture: anime.main_picture?.medium,
+      });
+    }
   } else {
     const today = new Date().toLocaleDateString('sv-SE'); // AAAA-MM-DD
     const form = { num_watched_episodes: ep };
@@ -444,11 +461,18 @@ async function markTab(tabId, { manual }) {
     try {
       await mal.updateListStatus(anime.id, form);
     } catch (e) {
-      toast(tabId, `No se pudo actualizar MyAnimeList: ${e.message}`, 'error');
+      toast(tabId, { kind: 'error', title: 'No se pudo actualizar MyAnimeList', text: e.message });
       throw e;
     }
     result = 'updated';
-    toast(tabId, `✓ MyAnimeList: ${anime.title} — episodio ${ep}${total ? `/${total}` : ''}${done ? ' · ¡completado!' : ''}`, 'ok');
+    // Al acabar el anime, el aviso pide además una nota (la que ya tuviera en MAL sale marcada).
+    toast(tabId, {
+      kind: 'ok',
+      title: done ? '¡Anime completado!' : `Episodio ${ep} marcado`,
+      text: done ? `${anime.title} · ¿Qué nota le das?` : `${anime.title} · ${ep}${total ? `/${total}` : ''}`,
+      picture: anime.main_picture?.medium,
+      ...(done && { rate: { id: anime.id, title: anime.title, score: ls?.score || 0 } }),
+    });
     await addHistory({ id: anime.id, title: anime.title, episode: ep, total, done, site: state.info.site, at: Date.now() });
   }
 
@@ -476,9 +500,11 @@ async function addHistory(entry) {
 
 // ---------- Avisos
 
-async function toast(tabId, text, kind) {
+// Aviso en la web: { kind: ok | info | warn | error, title, text, picture (portada), fix (pulsarlo abre el panel),
+// rate: { id, title, score } (pide una nota del 1 al 10) }
+async function toast(tabId, notice) {
   if (!(await getSettings()).toasts) return;
-  chrome.tabs.sendMessage(tabId, { type: 'toast', text, kind }, { frameId: 0 }).catch(() => {});
+  chrome.tabs.sendMessage(tabId, { type: 'toast', notice }, { frameId: 0 }).catch(() => {});
 }
 
 // ---------- Mascota de la web (esquina inferior izquierda de las webs compatibles)
@@ -579,6 +605,13 @@ async function handle(msg, sender) {
       return { items: await getMyList(msg.status) };
     case 'season':
       return { items: await getSeasonList(Number(msg.year), String(msg.season)) };
+    case 'rate': {
+      // Nota desde el aviso de anime acabado (1-10; 0 la quita).
+      const score = Math.round(Number(msg.score));
+      if (!(score >= 0 && score <= 10)) throw new Error('Nota no válida.');
+      await mal.updateListStatus(Number(msg.id), { score });
+      return { score };
+    }
     case 'addToList': {
       // Desde la pestaña Temporada: se apunta como pendiente (o el estado que pida el panel).
       if (!(await mal.getUser())) throw new Error('Conecta tu cuenta de MyAnimeList para añadir animes.');

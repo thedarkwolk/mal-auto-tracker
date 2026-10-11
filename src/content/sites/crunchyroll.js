@@ -71,7 +71,7 @@
   try {
     await chrome.runtime.sendMessage({ type: 'crSeriesMissing', malId });
   } catch {}
-  MALAuto.toast(`No he encontrado "${titles[0]}" en Crunchyroll: te dejo la búsqueda.`, 'warn');
+  MALAuto.toast({ kind: 'warn', title: 'No está en Crunchyroll', text: `No he encontrado "${titles[0]}": te dejo la búsqueda.` });
 })();
 
 // https://www.crunchyroll.com/es/watch/G0DUND0K2/the-journeys-end
