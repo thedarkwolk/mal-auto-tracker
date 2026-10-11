@@ -41,7 +41,31 @@ ${faces}
 .mal-mascot .m-paper { fill: #f4f4f5; }
 .mal-mascot[data-tone='white'] .m-ink { fill: #f4f4f5; }
 .mal-mascot[data-tone='white'] .m-paper { fill: #0a0a0c; }
-.mal-mascot .m-gaze { transform: translate(var(--gx, 0px), var(--gy, 0px)); transition: transform 0.3s ease-out; }
+/* Curva suave para todo lo de los ojos: arranca rápido y se posa despacio, sin rebote */
+.mal-mascot { --m-ease: cubic-bezier(0.22, 0.61, 0.36, 1); }
+.mal-mascot .m-gaze, .mal-mascot .m-eyes { transform-box: view-box; transform-origin: 0 0; }
+.mal-mascot .m-gaze { transform: translate(var(--gx, 0px), var(--gy, 0px)); transition: transform 0.45s var(--m-ease); }
+/* Al acercarse el cursor (--eo: 0 nada, 1 encima) los ojos de bloub crecen desde su punto medio (--cx/--cy)… */
+.mal-mascot .m-eyes {
+  --sx: calc(1 + 0.15 * var(--eo, 0));
+  --sy: calc(1 + 0.3 * var(--eo, 0));
+  transform: translate(var(--cx, 0px), var(--cy, 0px)) scale(var(--sx), var(--sy))
+    translate(calc(-1 * var(--cx, 0px)), calc(-1 * var(--cy, 0px)));
+  transition: transform 0.45s var(--m-ease), opacity 0.4s var(--m-ease);
+}
+/* …y ya cerca (data-wide) se funden con los ojos bien abiertos de bloub: los de siempre siguen creciendo hacia
+   su tamaño mientras se desvanecen, y los abiertos aparecen desde algo más pequeños. */
+.mal-mascot .m-gaze[data-wide] .m-eyes { --sx: 1.35; --sy: 1.6; opacity: 0; }
+.mal-mascot .m-wide {
+  opacity: 0;
+  transform: scale(0.7, 0.6);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.45s var(--m-ease), opacity 0.4s var(--m-ease);
+}
+.mal-mascot .m-gaze[data-wide] .m-wide { opacity: 1; transform: scale(1); }
+.mal-mascot .m-wide .m-blink { transform-box: fill-box; transform-origin: center; animation: m-blink 4.2s infinite; }
+@keyframes m-blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.12); } }
 
 /* Flota suavemente, solo en vertical: girar o estirar la imagen la reescala y emborrona el borde.
    Los desplazamientos van en % de la caja de la cara. */
@@ -66,6 +90,19 @@ ${faces}
   // caben enteros en cualquier dirección), y a qué distancia del bot (px de pantalla) ya miran del todo al cursor.
   const GAZE_REACH = 45;
   const GAZE_FULL = 260;
+  // Con el cursor a menos de EYES_FAR px del centro del bot empieza a abrir los ojos; a EYES_NEAR, del todo.
+  const EYES_FAR = 160;
+  const EYES_NEAR = 50;
+  // Ojos bien abiertos de cerca: los de la cara de ojos abiertos de bloub (una cápsula de 40×60 por ojo, cada una con
+  // su matrix). Sus posiciones van relativas al punto medio entre los dos, que se lleva al de los ojos en reposo.
+  // Aparecen con --eo por encima de WIDE_ON y se van por debajo de WIDE_OFF (el hueco evita que parpadeen en el límite).
+  const WIDE_EYE = 'M-20 -10A20 20 0 0 1 0 -30L0 -30A20 20 0 0 1 20 -10L20 10A20 20 0 0 1 0 30L0 30A20 20 0 0 1 -20 10Z';
+  const WIDE_AT = [
+    [0.96, 0.16, -0.05, 0.92, -28.38, 36.16],
+    [0.91, -0.12, -0.05, 0.92, 41.42, 37.52],
+  ];
+  const WIDE_ON = 0.6;
+  const WIDE_OFF = 0.4;
 
   // Primer fotograma de la animación de cada ojo: matrix(a, b, c, d, x, y), donde (x, y) es su posición.
   const FIRST_FRAME = [
@@ -82,12 +119,25 @@ ${faces}
       const eyes = text.match(/<g clip-path="url\(#cuerpo\)" fill="#[0-9a-f]+">([\s\S]*?)<\/g>/);
       const at = FIRST_FRAME.map((re) => text.match(re)?.[1].split(',').map(Number));
       if (!body || !eyes || at.some((m) => m?.length !== 6)) throw new Error('SVG de idle inesperado');
+      const rest = [(at[0][4] + at[1][4]) / 2, (at[0][5] + at[1][5]) / 2];
+      // Los ojos abiertos, con su mismo punto medio que los de reposo. Cada uno en su <g> para el parpadeo (una
+      // animación CSS de transform pisaría la matrix del propio ojo).
+      const mid = [(WIDE_AT[0][4] + WIDE_AT[1][4]) / 2, (WIDE_AT[0][5] + WIDE_AT[1][5]) / 2];
+      const wide = WIDE_AT.map(([a, b, c, d, x, y]) => {
+        const at = [a, b, c, d, (x - mid[0] + rest[0]).toFixed(2), (y - mid[1] + rest[1]).toFixed(2)];
+        return `<g class="m-blink"><path d="${WIDE_EYE}" transform="matrix(${at.join(',')})"/></g>`;
+      }).join('');
       const markup = text
         .replace(body, `${body} class="m-ink"`)
         .replace(/(<\/defs><path d="[^"]+" class="m-ink") fill="#[0-9a-f]+"/, '$1')
-        .replace(eyes[0], `<g clip-path="url(#cuerpo)" class="m-paper"><g class="m-gaze">${eyes[1]}</g></g>`)
+        .replace(
+          eyes[0],
+          () =>
+            `<g clip-path="url(#cuerpo)" class="m-paper"><g class="m-gaze"><g class="m-eyes">${eyes[1]}</g>` +
+            `<g class="m-wide">${wide}</g></g></g>`,
+        )
         .replace(/ width="250" height="250"/, ' aria-hidden="true"');
-      return { markup, rest: [(at[0][4] + at[1][4]) / 2, (at[0][5] + at[1][5]) / 2] };
+      return { markup, rest };
     });
     return idleSvg;
   }
@@ -99,6 +149,8 @@ ${faces}
     slot.innerHTML = markup;
     const gaze = slot.querySelector('.m-gaze');
     const face = bot.querySelector('.m-body');
+    gaze.style.setProperty('--cx', `${rest[0]}px`);
+    gaze.style.setProperty('--cy', `${rest[1]}px`);
 
     let x = null;
     let y = null;
@@ -109,8 +161,10 @@ ${faces}
       const follow = !IMG_MOODS.includes(bot.dataset.mood) && bot.getAttribute('aria-expanded') !== 'true';
       // Sin seguir, los ojos se quedan donde los pone bloub. Siguiendo, su punto medio va hacia el cursor,
       // tanto más lejos del centro de la bola cuanto más lejos está el cursor.
+      // Y cuanto más cerca está el cursor, más abre los ojos.
       let gx = 0;
       let gy = 0;
+      let open = 0;
       if (follow && x !== null) {
         const r = face.getBoundingClientRect();
         const dx = x - (r.left + r.width / 2);
@@ -119,9 +173,12 @@ ${faces}
         const k = (Math.min(d / GAZE_FULL, 1) * GAZE_REACH) / d;
         gx = dx * k - rest[0];
         gy = dy * k - rest[1];
+        open = Math.min(1, Math.max(0, (EYES_FAR - d) / (EYES_FAR - EYES_NEAR)));
       }
       gaze.style.setProperty('--gx', `${gx.toFixed(1)}px`);
       gaze.style.setProperty('--gy', `${gy.toFixed(1)}px`);
+      gaze.style.setProperty('--eo', open.toFixed(2));
+      gaze.toggleAttribute('data-wide', open > (gaze.hasAttribute('data-wide') ? WIDE_OFF : WIDE_ON));
     };
     const schedule = () => (frame ||= requestAnimationFrame(update));
     addEventListener('mousemove', (e) => ((x = e.clientX), (y = e.clientY), schedule()), { passive: true });
