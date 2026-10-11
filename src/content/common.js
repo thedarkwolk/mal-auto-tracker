@@ -160,6 +160,7 @@
       </style><div class="card"><div class="shade"><div class="sheet"></div></div>
         <button class="mal-mascot" aria-expanded="false">${globalThis.MALMascot.svg}</button></div>`;
       root.querySelector('button').onclick = () => setPanel(!panelOpen());
+      globalThis.MALMascot.mount(root.querySelector('button')).catch((e) => console.debug('[MAL Auto]', e));
     }
     // En pantalla completa no se ve: solo cuelga del body, como debe ser mientras ves el episodio.
     if (!mascotHost.isConnected) document.body.appendChild(mascotHost);

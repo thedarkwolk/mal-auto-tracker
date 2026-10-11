@@ -373,7 +373,7 @@ async function toast(tabId, text, kind) {
 // ---------- Mascota de la web (esquina inferior izquierda de las webs compatibles)
 
 // Qué cara pone y qué dice (en el tooltip) según lo que esté pasando en la pestaña: idle fuera de un episodio,
-// curious dentro y excited cuando lo acabas. `site` hace falta cuando aún no hay episodio.
+// también dentro (siguiendo el cursor) y excited cuando lo acabas. `site` hace falta cuando aún no hay episodio.
 async function mascotFor(state, site) {
   const settings = await getSettings();
   site = state?.info.site || site;
@@ -387,10 +387,10 @@ async function mascotFor(state, site) {
       ? `¡Episodio ${episode} visto! Ya está apuntado en tu lista.`
       : `¡Episodio ${episode} acabado! Ya lo tenías en tu lista.`);
   }
-  if (phase === 'resolving') return say('curious', `Buscando "${info.title}" en MyAnimeList…`);
-  if (phase === 'matched') return say('curious', `¡Episodio ${episode} de ${anime.title}! Lo marco cuando acabe.`);
-  if (phase === 'error') return say('curious', 'Algo ha fallado con MyAnimeList… Pulsa para verlo.');
-  return say('curious', 'Mmm… no sé seguro qué anime es. Pulsa y me echas una mano.');
+  if (phase === 'resolving') return say('idle', `Buscando "${info.title}" en MyAnimeList…`);
+  if (phase === 'matched') return say('idle', `¡Episodio ${episode} de ${anime.title}! Lo marco cuando acabe.`);
+  if (phase === 'error') return say('idle', 'Algo ha fallado con MyAnimeList… Pulsa para verlo.');
+  return say('idle', 'Mmm… no sé seguro qué anime es. Pulsa y me echas una mano.');
 }
 
 async function pushMascot(tabId, state, site) {
