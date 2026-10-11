@@ -114,6 +114,7 @@ export async function login() {
   const auth = { ...(await getAuth()), user: { name: me.name, picture: me.picture || null } };
   await chrome.storage.local.set({ auth });
   animeCache.clear();
+  fullCache.clear();
   return auth.user;
 }
 
@@ -160,6 +161,19 @@ export async function getAnime(id, { fresh = false } = {}) {
   return node;
 }
 
+// Todo lo que enseña la ficha del panel. Caché aparte de la de getAnime: lleva más campos.
+const FULL_FIELDS =
+  'title,main_picture,alternative_titles,start_date,synopsis,mean,rank,num_list_users,genres,media_type,status,' +
+  'num_episodes,start_season,source,average_episode_duration,studios,related_anime,my_list_status';
+const fullCache = new Map();
+export async function getAnimeFull(id) {
+  const hit = fullCache.get(id);
+  if (hit && Date.now() - hit.at < 5 * 60 * 1000) return hit.node;
+  const node = await api(`/anime/${id}?fields=${FULL_FIELDS}`);
+  fullCache.set(id, { node, at: Date.now() });
+  return node;
+}
+
 // Animes de una temporada (season: winter, spring, summer o fall), de más a menos populares. Con sesión, cada uno
 // trae tu estado en la lista (my_list_status). Incluye los que siguen emitiéndose de temporadas anteriores.
 const SEASON_FIELDS =
@@ -192,5 +206,6 @@ export async function getMyList(status) {
 export async function updateListStatus(id, form) {
   const res = await api(`/anime/${id}/my_list_status`, { method: 'PATCH', form });
   animeCache.delete(id);
+  fullCache.delete(id);
   return res;
 }

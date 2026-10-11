@@ -12,8 +12,11 @@
 
   window.MALAuto = {
     // Llama a detect() periódicamente (las webs son SPA) y avisa al background cuando cambia.
-    start(detect) {
+    // nav(): { prev, next } con las URLs del episodio anterior y el siguiente, si la web las da en la página; si no,
+    // y sus URLs llevan el número (link.template), se construyen. El panel las pide para moverse entre episodios.
+    start(detect, { nav } = {}) {
       let last = null;
+      let current = null;
       const tick = () => {
         let info = null;
         try {
@@ -22,6 +25,7 @@
           console.debug('[MAL Auto]', e);
         }
         if (info && !(Number.isInteger(info.episode) && info.episode > 0 && info.title)) info = null;
+        current = info;
         const sig = info ? JSON.stringify(info) : '';
         if (sig === last) return;
         last = sig;
@@ -29,6 +33,15 @@
       };
       tick();
       setInterval(tick, 1500);
+
+      chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+        if (msg.type !== 'episodeNav') return;
+        if (!current) return sendResponse(null);
+        if (nav) return sendResponse(nav());
+        const template = current.link?.template;
+        const at = (ep) => template.replace('{ep}', ep);
+        sendResponse(template ? { prev: current.episode > 1 ? at(current.episode - 1) : null, next: at(current.episode + 1) } : null);
+      });
     },
 
     slugToTitle(slug) {

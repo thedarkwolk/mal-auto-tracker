@@ -96,4 +96,13 @@ MALAuto.start(() => {
     episode: Number(ep[1]),
     link: { page: new URL(link.getAttribute('href'), location.origin).href },
   };
+}, {
+  // Episodio anterior y siguiente: Crunchyroll los enlaza bajo el vídeo ([data-t="prev-episode"], "next-episode").
+  nav: () => {
+    const at = (which) => {
+      const href = document.querySelector(`[data-t="${which}-episode"] a[href*="/watch/"]`)?.getAttribute('href');
+      return href ? new URL(href, location.origin).href : null;
+    };
+    return { prev: at('prev'), next: at('next') };
+  },
 });
