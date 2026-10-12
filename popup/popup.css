@@ -372,7 +372,8 @@ input::placeholder { color: var(--faint); }
 }
 html:not(.embedded) .filter-bar.no-filters { display: none; }
 html.embedded body { padding-bottom: 70px; }
-html.embedded .filter-bar { position: fixed; left: 0; right: 0; height: 70px; padding: 6px 12px 6px 76px; }
+/* Metido en la web, la bola del bot tapa la esquina de abajo a la izquierda del panel: un poco de hueco */
+html.embedded .filter-bar { position: fixed; left: 0; right: 0; height: 70px; padding: 6px 12px 6px 38px; }
 .bar-group { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 /* Una sola fila de filtros; si no caben, se desliza en horizontal */
 .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }

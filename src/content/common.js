@@ -72,8 +72,8 @@
   const NOTE_COLOR = { ok: '#3ecf8e', info: '#3b93f0', warn: '#f0b429', error: '#e8483f' };
 
   // Estilos del aviso, compartidos por el que va con el bot y el suelto. El del bot es una pestaña del alto de la bola
-  // (37px) que sale de detrás de ella: empieza en su centro (BALL: a 36px de la izquierda y 33px del fondo de la
-  // tarjeta), así que la bola tapa su lado izquierdo, y solo el derecho es redondo. El texto va a la derecha de la bola
+  // (37px) que sale de detrás de ella: empieza en su centro (a 36px de la izquierda y 33px del fondo de la
+  // tarjeta, radio 18,5px), así que la bola tapa su lado izquierdo, y solo el derecho es redondo. El texto va a la derecha de la bola
   // en dos líneas. Se despliega en lo que dura la vuelta del bot y con su curva: el recorte empieza siendo la bola (un
   // círculo con su centro y su radio) y se alarga hacia la derecha, así que su lado izquierdo siempre queda detrás de
   // ella y no asoman las esquinas. Su borde
@@ -332,13 +332,16 @@
   }
 
   // El bot (la mascota) y el panel van en una misma tarjeta fija abajo a la izquierda. Cerrada solo se ve el bot;
-  // al pulsarlo da la vuelta y el panel sale de la bola como los avisos: el recorte empieza siendo ella y crece hasta
-  // llenar la tarjeta en lo que dura la vuelta, con el bot dentro en su esquina. Al cerrarlo, al revés. La tarjeta ocupa siempre su sitio pero sin recoger clics: solo el bot y el panel abierto.
-  // El panel llena la tarjeta; su franja de abajo (la barra de filtros) deja hueco a la izquierda para el bot,
-  // que va encima.
-  // La bola en la tarjeta como recorte inset (arriba, derecha, abajo, izquierda): centro en x = 8 + 56/2 = 36px e
-  // y (desde abajo) = 6 + alto del bot × (1 − 72/130) ≈ 33px, radio 18,5px.
-  const BALL = 'calc(100% - 51.5px) calc(100% - 54.5px) 14.5px 17.5px';
+  // al pulsarlo da la vuelta y el panel sale de detrás de la bola como los avisos. La bola está en x = 8 + 56/2 = 36px
+  // e y (desde abajo) = 6 + alto del bot × (1 − 72/130) ≈ 33px, con radio 18,5px; el panel empieza un poco antes
+  // de su centro (SHEET_X) y un poco por encima de su parte de abajo (SHEET_Y), así que la bola le tapa la esquina de
+  // abajo a la izquierda (su barra de filtros le deja hueco, en popup.css). El recorte empieza siendo la bola y crece hasta el panel entero en lo que
+  // dura la vuelta; al cerrarlo, al revés. La tarjeta ocupa siempre su sitio pero sin recoger clics: solo el bot y el
+  // panel abierto.
+  const SHEET_X = 26; // borde izquierdo del panel en la tarjeta (el centro de la bola, en 36px)
+  const SHEET_Y = 19.5; // borde de abajo del panel desde el fondo de la tarjeta (el centro de la bola, en 33px)
+  const BALL_IN_SHEET = 36 - SHEET_X; // centro de la bola desde el borde izquierdo del panel…
+  const BALL_UP_SHEET = 33 - SHEET_Y; // …y desde su borde de abajo
 
   let mascotHost;
   setInterval(() => {
@@ -362,10 +365,12 @@
         .card{position:absolute;inset:0}
         .card:has(.note.show:hover) .mal-mascot :is(.m-ink,.m-paper){animation-play-state:paused}
         .shade{position:absolute;inset:0;filter:drop-shadow(0 10px 24px rgba(0,0,0,.5))}
-        .sheet{position:absolute;inset:0;overflow:hidden;background:#0a0a0c;border:2px solid #2a2a30;border-radius:6px;
-               clip-path:inset(${BALL} round 18.5px);visibility:hidden;
+        .sheet{position:absolute;inset:0 0 ${SHEET_Y}px ${SHEET_X}px;overflow:hidden;background:#0a0a0c;border:2px solid #2a2a30;border-radius:6px;
+               clip-path:inset(calc(100% - ${BALL_UP_SHEET + 18.5}px) calc(100% - ${BALL_IN_SHEET + 18.5}px)
+                 ${BALL_UP_SHEET - 18.5}px ${BALL_IN_SHEET - 18.5}px round 18.5px);
+               visibility:hidden;
                transition:clip-path ${SPIN()},visibility 0s ${spinMs()}ms}
-        .open .sheet{clip-path:inset(0 round 6px);visibility:visible;pointer-events:auto;
+        .open .sheet{clip-path:inset(0 0 ${BALL_UP_SHEET - 18.5}px ${BALL_IN_SHEET - 18.5}px round 6px);visibility:visible;pointer-events:auto;
                transition:clip-path ${SPIN()},visibility 0s}
         .panel{display:block;width:100%;height:100%;border:0;color-scheme:dark}
         button{all:unset;cursor:pointer;border-radius:50%}
