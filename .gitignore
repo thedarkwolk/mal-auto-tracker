@@ -2,6 +2,7 @@
 *.html
 !popup/*.html
 !options/*.html
+!dev/*.html
 
 # Sistema
 Thumbs.db

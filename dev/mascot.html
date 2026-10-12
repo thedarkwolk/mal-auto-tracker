@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Bot · banco de pruebas</title>
+  <link rel="stylesheet" href="mascot.css">
+</head>
+<body>
+  <header>
+    <h1>Bot · banco de pruebas</h1>
+    <label>Velocidad de las animaciones
+      <select id="rate">
+        <option value="1">1×</option>
+        <option value="0.5">0,5×</option>
+        <option value="0.25">0,25×</option>
+        <option value="0.1">0,1×</option>
+        <option value="0">Pausa</option>
+      </select>
+    </label>
+  </header>
+
+  <section>
+    <h2>Laboratorio</h2>
+    <p class="note">El bot del tamaño de las webs, con las distancias a las que reacciona. Con el cursor simulado, el
+      ratón de verdad deja de contar (para todos los bots de la página) y el recorrido se repite siempre igual.</p>
+    <div class="lab">
+      <div class="stage dark" id="stage">
+        <div class="rings" id="rings">
+          <div class="ring" id="ring-full"><span>mira del todo</span></div>
+          <div class="ring" id="ring-far"><span>empieza a abrir</span></div>
+          <div class="ring" id="ring-near"><span>abiertos</span></div>
+        </div>
+        <div class="slot" id="lab-slot"></div>
+        <div class="cursor" id="cursor" hidden></div>
+      </div>
+      <aside class="controls">
+        <fieldset>
+          <legend>Cursor</legend>
+          <label class="check"><input type="radio" name="mode" value="real" checked> Ratón de verdad</label>
+          <label class="check"><input type="radio" name="mode" value="drag"> Simulado: arrastra en el escenario</label>
+          <label class="check"><input type="radio" name="mode" value="orbit"> Simulado: vueltas alrededor</label>
+          <label class="check"><input type="radio" name="mode" value="approach"> Simulado: acercarse y alejarse</label>
+          <label>Distancia de las vueltas <output id="radius-out"></output>
+            <input id="radius" type="range" min="0" max="320" value="120"></label>
+          <label>Dirección al acercarse <output id="angle-out"></output>
+            <input id="angle" type="range" min="0" max="359" value="20"></label>
+          <label>Velocidad del recorrido <output id="speed-out"></output>
+            <input id="speed" type="range" min="0.1" max="3" step="0.1" value="1"></label>
+        </fieldset>
+        <fieldset>
+          <legend>Bot</legend>
+          <label>Tamaño
+            <select id="size">
+              <option value="56">56 px (el de las webs)</option>
+              <option value="84">84 px</option>
+              <option value="160">160 px</option>
+              <option value="240">240 px</option>
+            </select></label>
+          <label>Tono
+            <select id="tone"><option value="white">blanco (web oscura)</option><option value="black">negro (web clara)</option></select></label>
+          <label>Aviso
+            <select id="alert">
+              <option value="">ninguno</option><option value="ok">ok</option><option value="info">info</option>
+              <option value="warn">warn</option><option value="error">error</option>
+            </select></label>
+          <label>Cara
+            <select id="face">
+              <option value="">la del aviso (info curiosa, warn desconfiada, error confusa)</option>
+              <option value="neutral">normal</option><option value="curious">curiosa</option>
+              <option value="suspicious">desconfiada</option><option value="confused">confusa</option>
+            </select></label>
+          <label class="check"><input id="expanded" type="checkbox"> Panel abierto</label>
+          <div class="buttons"><button id="hop" type="button">Saltar</button><button id="blink" type="button">Parpadear</button></div>
+        </fieldset>
+        <dl class="readout" id="readout"></dl>
+        <p class="tuning" id="tuning"></p>
+      </aside>
+    </div>
+    <canvas id="timeline" class="timeline"></canvas>
+    <p class="legend"><b class="l-eo">━</b> alto del ojo izquierdo · <b class="l-lon">━</b> mirada izquierda–derecha
+      (centro: al frente) · <b class="l-d">━</b> distancia (abajo encima, arriba a partir de 260 px)</p>
+
+    <h2 class="sub">Avisos como en las webs</h2>
+    <p class="note">El bot y los avisos de src/content/common.js, sin tocar: sale del bot, el bot da la vuelta y se pone del
+      color y la cara del aviso. Pulsar el aviso lo cierra; pulsar el bot abre el panel (fuera de la extensión sale vacío).</p>
+    <div class="notices">
+      <div class="stage web dark" id="web"></div>
+      <aside class="controls">
+        <fieldset>
+          <legend>Lanzar aviso</legend>
+          <div class="buttons wrap" id="notice-buttons"></div>
+        </fieldset>
+        <fieldset>
+          <legend>Web</legend>
+          <label>Fondo
+            <select id="web-ground"><option value="dark">oscuro (bot blanco)</option><option value="light">claro (bot negro)</option></select></label>
+        </fieldset>
+      </aside>
+    </div>
+  </section>
+
+  <section>
+    <h2>Estados</h2>
+    <p class="note">Bots montados como en las webs (siguen al cursor, real o simulado), uno por estado.</p>
+    <div class="grid" id="states"></div>
+  </section>
+
+  <section>
+    <h2>Caras</h2>
+    <p class="note">Las de bloub que salen con los avisos, fijas (no siguen al cursor), y la normal al frente.</p>
+    <div class="row" id="faces"></div>
+  </section>
+
+  <section>
+    <h2>Mirada en 8 direcciones</h2>
+    <p class="note">Fijos, con el cursor lejos (sin abrir los ojos). En el centro, sin cursor: al frente.</p>
+    <div class="compass" id="compass"></div>
+  </section>
+
+  <section>
+    <h2>Apertura al acercarse</h2>
+    <p class="note">Fijos, con el cursor abajo a la derecha y cada vez más cerca: los ojos crecen sin saltos.</p>
+    <div class="row" id="opening"></div>
+  </section>
+
+  <section>
+    <h2>Original de bloub</h2>
+    <p class="note">El SVG tal cual (mascot/idle-black.svg), con su animación propia: de él solo se usa la bola.</p>
+    <div class="row" id="originals">
+      <figure><div class="well light"><img src="../mascot/idle-black.svg" alt=""></div><figcaption>idle-black.svg</figcaption></figure>
+    </div>
+  </section>
+
+  <script src="chrome-stub.js"></script>
+  <script src="../src/mascot.js"></script>
+  <script src="../src/content/common.js"></script>
+  <script src="mascot.js"></script>
+</body>
+</html>
