@@ -18,6 +18,26 @@ async function setTab(tabId, state) {
 }
 chrome.tabs.onRemoved.addListener((tabId) => chrome.storage.session.remove(tabKey(tabId)));
 
+// Lo guardado (la cuenta de MAL con sus tokens, el Client ID y el Secret…) es solo de la extensión: los scripts de
+// las webs no lo leen, y lo poco que necesitan (el umbral, qué dice el bot) se lo da el background por mensajes.
+// Chrome lo deja así si admite restringir local y sync; si no, el error se ignora y los scripts siguen sin usarlo.
+for (const area of [chrome.storage.local, chrome.storage.sync]) {
+  try {
+    area.setAccessLevel?.({ accessLevel: 'TRUSTED_CONTEXTS' })?.catch(() => {});
+  } catch {
+    // versión de Chrome sin setAccessLevel para esta zona
+  }
+}
+
+// Cambió la configuración o la cuenta de MAL: las webs abiertas vuelven a preguntar qué dice el bot y el umbral.
+chrome.storage.onChanged.addListener(async (changes, area) => {
+  if (!((area === 'sync' && 'settings' in changes) || (area === 'local' && 'auth' in changes))) return;
+  const { threshold } = await getSettings();
+  for (const tab of await chrome.tabs.query({})) {
+    chrome.tabs.sendMessage(tab.id, { type: 'settingsChanged', threshold }).catch(() => {});
+  }
+});
+
 // ---------- Asociaciones guardadas "anime de la web" -> id de MAL
 
 const mapKey = (info) => `${info.site}:${info.key}`;
@@ -763,7 +783,9 @@ function updateBadge(tabId, state) {
 // votar desde el aviso. Todo lo demás (tu lista, cambiarla, conectar o desconectar la cuenta…) solo las páginas de la
 // extensión: el popup, las opciones y el panel, también cuando va incrustado en una web. Una web no puede hablar con
 // el background, pero si se comprometiera el proceso de una, su script no podría ir más allá de esto.
-const FROM_WEB = new Set(['episode', 'noEpisode', 'threshold', 'getMascot', 'rate', 'crSeriesFound', 'crSeriesMissing']);
+const FROM_WEB = new Set([
+  'episode', 'noEpisode', 'threshold', 'getThreshold', 'getMascot', 'rate', 'crSeriesFound', 'crSeriesMissing',
+]);
 // Por el esquema y no por la dirección exacta: el panel incrustado va con una dirección dinámica (use_dynamic_url),
 // con otro id. sender.url lo pone el navegador; una web no puede hacerse pasar por chrome-extension:.
 const fromExtension = (sender) => sender.id === chrome.runtime.id && /^chrome-extension:/.test(sender.url || '');
@@ -789,6 +811,8 @@ async function handle(msg, sender) {
     case 'threshold':
       await onThreshold(tabId);
       return {};
+    case 'getThreshold':
+      return { threshold: (await getSettings()).threshold };
     case 'getState': {
       const settings = await getSettings();
       const { history = [] } = await chrome.storage.local.get('history');

@@ -6,18 +6,24 @@
   window.__malAutoVideoWatcher = true;
 
   const MIN_DURATION = 90; // segundos: descarta anuncios y previews
-  let threshold = 0.85;
-
+  // El umbral se pide al background (este script no lee lo guardado de la extensión) y solo cuando hace falta: la
+  // primera vez que se ve un vídeo largo, para no despertar a la extensión en cada frame de cada web. Si cambia en las
+  // opciones, el background lo avisa.
+  let threshold = null;
+  let asked = false;
+  const ask = () => {
+    asked = true;
+    chrome.runtime
+      .sendMessage({ type: 'getThreshold' })
+      .then((r) => r?.ok && (threshold = r.threshold))
+      .catch(() => {});
+  };
   try {
-    chrome.storage.sync.get('settings').then(({ settings }) => {
-      if (settings?.threshold) threshold = settings.threshold;
-    });
-    chrome.storage.onChanged.addListener((changes) => {
-      const t = changes.settings?.newValue?.threshold;
-      if (t) threshold = t;
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg.type === 'settingsChanged' && msg.threshold) threshold = msg.threshold;
     });
   } catch {
-    return;
+    return; // extensión recargada
   }
 
   const armed = new WeakMap();
@@ -30,6 +36,16 @@
       if (!(v instanceof HTMLVideoElement)) return;
       const d = v.duration;
       if (!d || !isFinite(d) || d < MIN_DURATION) return;
+      if (threshold === null) {
+        if (!asked) {
+          try {
+            ask();
+          } catch {
+            // extensión recargada
+          }
+        }
+        return;
+      }
       const ratio = v.currentTime / d;
       if (ratio < 0.2) armed.set(v, true); // empieza un vídeo nuevo (o se rebobina): se puede volver a avisar
       if (ratio >= threshold && armed.get(v) !== false) {

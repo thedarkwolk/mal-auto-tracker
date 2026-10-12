@@ -459,19 +459,19 @@
     if (panel && e.source === panel.contentWindow && e.data?.malAuto === 'closePanel') setPanel(false);
   });
 
-  // Cambió la configuración o la cuenta de MAL: se vuelve a preguntar qué decir (o si se ve).
-  chrome.storage.onChanged.addListener(async (changes, area) => {
-    if (!((area === 'sync' && 'settings' in changes) || (area === 'local' && 'auth' in changes))) return;
+  // Cambió la configuración o la cuenta de MAL (lo avisa el background): se vuelve a preguntar qué decir (o si se ve).
+  async function refreshMascot() {
     try {
       const res = await chrome.runtime.sendMessage({ type: 'getMascot', site: currentSite() });
       if (res?.ok) showMascot(res);
     } catch {
       // La extensión se recargó: este content script ya no puede hablar con ella.
     }
-  });
+  }
 
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === 'toast') showToast(msg.notice);
     if (msg.type === 'mascot') showMascot(msg);
+    if (msg.type === 'settingsChanged') refreshMascot();
   });
 })();
