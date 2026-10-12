@@ -101,10 +101,23 @@
     @keyframes n-ink-out{from{border-color:var(--nc)}to{border-color:var(--tone)}}
     @keyframes n-ink-back{from{border-color:var(--from)}to{border-color:var(--tone)}}
     .note:not(.solo) .n-txt{gap:0}
-    .note:not(.solo) .n-txt > :not(.n-rate){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .note:not(.solo):not(.vote) .n-txt > *{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .note:not(.solo) .n-pic{width:22px;height:30px;border-radius:3px}
-    /* Para poner nota no caben tres líneas: el título y los botones */
-    .note:not(.solo) .n-txt:has(.n-rate) > span:not(.n-rate){display:none}
+    /* El de votar un anime acabado (vote): un panel pequeño que sale de detrás de la bola igual que el grande (con la
+       misma esquina tapada), con la portada, la fila de notas a lo ancho y "Ahora no". Pulsarlo no lo cierra. */
+    .note.vote:not(.solo){height:auto;margin:0 0 ${SHEET_Y}px ${SHEET_X}px;padding:14px 14px 40px 16px;
+          border-left:2px solid var(--tone);border-radius:6px;line-height:1.35;display:grid;grid-template-columns:1fr auto;
+          align-items:start;gap:2px 12px;cursor:default;
+          clip-path:inset(calc(100% - ${BALL_UP_SHEET + 18.5}px) calc(100% - ${BALL_IN_SHEET + 18.5}px)
+            ${BALL_UP_SHEET - 18.5}px ${BALL_IN_SHEET - 18.5}px round 18.5px)}
+    .note.vote:not(.solo).show{clip-path:inset(0 0 ${BALL_UP_SHEET - 18.5}px ${BALL_IN_SHEET - 18.5}px round 6px)}
+    .note.vote .n-txt{gap:2px}
+    .note.vote .n-txt strong{font-size:15px}
+    .note.vote .n-pic{width:48px;height:68px;border-radius:4px}
+    .note.vote > .n-rate{grid-column:1 / -1;margin-top:10px;gap:4px}
+    .note.vote .n-rate button{width:26px;height:26px;font-size:12px}
+    .n-later{all:unset;position:absolute;right:14px;bottom:12px;font-size:12px;font-weight:700;color:#a1a1aa;cursor:pointer}
+    .n-later:hover{color:#f4f4f5}
     .note.solo{min-height:70px;padding:10px 12px 12px 14px;border-radius:6px;clip-path:circle(0px at 0 100%)}
     .note.solo.show{clip-path:circle(150% at 0 100%);transition:clip-path .5s cubic-bezier(.3,.7,.2,1),visibility 0s}
     .note.solo:hover{border-color:#3a3a41}
@@ -116,8 +129,6 @@
     .n-rate button{all:unset;box-sizing:border-box;width:22px;height:22px;display:grid;place-items:center;border-radius:4px;
           background:#151518;border:1px solid #2a2a30;color:#f4f4f5;font-size:11px;font-weight:800;cursor:pointer}
     /* Como unas estrellas: al pasar por una nota se iluminan también las de antes; la que ya tenías sale marcada */
-    .note:not(.solo) .n-rate{gap:2px}
-    .note:not(.solo) .n-rate button{width:19px;height:16px;font-size:9.5px;border-radius:3px}
     .n-rate button.on,.n-rate button:hover,.n-rate button:has(~ button:hover){background:#f4f4f5;color:#0a0a0c;border-color:#f4f4f5}
     .n-rate:hover button.on:not(:hover):not(:has(~ button:hover)){background:#151518;color:#f4f4f5;border-color:#2a2a30}
     .n-rate button:disabled{opacity:.5;cursor:default}
@@ -152,16 +163,14 @@
     return soloHost.shadowRoot;
   }
 
-  const botButton = () => (mascotHost?.isConnected ? mascotHost.shadowRoot.querySelector('button') : null);
+  const botButton = () => (mascotHost?.isConnected ? mascotHost.shadowRoot.querySelector('.mal-mascot') : null);
 
   // El bot con el color y la cara del aviso (src/mascot.js): da la vuelta y luego se va apagando en lo que queda.
   let notices = 0;
-  // El color que tiene ahora la bola (y sus ojos), del que sale la animación siguiente: si se estaba apagando, no es el
-  // normal ni el del aviso.
+  // El color que tiene ahora la bola, del que sale la animación siguiente: si se estaba apagando, no es el normal ni el
+  // del aviso.
   function holdColor(button) {
-    for (const part of ['ink', 'paper']) {
-      button.style.setProperty(`--m-from-${part}`, getComputedStyle(button.querySelector(`.m-${part}`)).fill);
-    }
+    button.style.setProperty('--m-from-ink', getComputedStyle(button.querySelector('.m-ink')).fill);
   }
   function alertBot(button, kind, ms) {
     holdColor(button);
@@ -259,19 +268,36 @@
     }
 
     const note = noteRoot().querySelector('.note');
-    const canFix = fix && !note.classList.contains('solo');
+    const solo = note.classList.contains('solo');
+    const canFix = fix && !solo;
+    const vote = !!rate && !solo; // con el bot, el de votar es un panel pequeño
     const fill = () => {
       note.style.setProperty('--nc', NOTE_COLOR[kind] || NOTE_COLOR.info);
       note.style.setProperty('--ms', `${ms}ms`);
       note.style.setProperty('--fade', `${Math.max(ms - spinMs(), 0)}ms`);
       if (button) note.style.setProperty('--tone', getComputedStyle(button).getPropertyValue('--m-tone-ink'));
+      if (note.classList.contains('vote') !== vote) {
+        // Cambia de forma (pestaña ↔ panel de votar) sin transición: si no, el recorte cerrado de una se animaría
+        // hacia el de la otra y saldría desde la forma equivocada (el panel de votar, desplegándose como la pestaña).
+        note.style.transition = 'none';
+        note.classList.toggle('vote', vote);
+        void note.offsetWidth;
+        note.style.transition = '';
+      }
       const txt = note.querySelector('.n-txt');
       txt.replaceChildren();
+      note.querySelectorAll(':scope > .n-rate, :scope > .n-later').forEach((e) => e.remove());
       if (title) txt.append(Object.assign(document.createElement('strong'), { textContent: title }));
       if (text) txt.append(Object.assign(document.createElement('span'), { textContent: text }));
-      if (rate) txt.append(rateRow(rate, picture));
+      // La fila de notas: en el panel de votar, a lo ancho debajo; en el suelto, con el texto
+      if (rate) (vote ? note : txt).append(rateRow(rate, picture));
+      if (vote) {
+        const later = Object.assign(document.createElement('button'), { className: 'n-later', textContent: 'Ahora no' });
+        later.onclick = (e) => (e.stopPropagation(), closeNote());
+        note.append(later);
+      }
       const pic = note.querySelector('.n-pic');
-      pic.hidden = !picture || !!rate; // con la fila de notas no cabe la portada
+      pic.hidden = !picture || (!!rate && !vote); // en el suelto, con la fila de notas no cabe la portada
       pic.onerror = () => (pic.hidden = true); // la web no deja cargar la portada (su política de seguridad)
       if (picture) pic.src = picture;
       // La línea de tiempo, nueva para cada aviso. Se cierra al llegar al final con la promesa de la animación y no
@@ -282,8 +308,8 @@
       const anim = life.getAnimations()[0];
       (anim ? anim.finished : new Promise((r) => setTimeout(r, ms))).then(() => run === noteRun && closeNote(), () => {});
     };
-    note.title = canFix ? 'Pulsa para abrir el panel' : 'Pulsa para cerrar';
-    note.onclick = () => (canFix ? setPanel(true) : closeNote());
+    note.title = vote ? '' : canFix ? 'Pulsa para abrir el panel' : 'Pulsa para cerrar';
+    note.onclick = vote ? null : () => (canFix ? setPanel(true) : closeNote());
 
     // Sale desde el bot: el bot da la vuelta y se pone de su color y su cara (src/mascot.js), y el aviso crece desde la bola.
     const open = () => {
@@ -345,7 +371,7 @@
 
   let mascotHost;
   setInterval(() => {
-    if (mascotHost?.isConnected && !panelOpen()) mascotHost.shadowRoot.querySelector('button').dataset.tone = pageTone();
+    if (mascotHost?.isConnected && !panelOpen()) mascotHost.shadowRoot.querySelector('.mal-mascot').dataset.tone = pageTone();
   }, 2000);
 
   function showMascot({ show, text }) {
@@ -363,7 +389,7 @@
       root.innerHTML = `<style>
         ${fontFace()}
         .card{position:absolute;inset:0}
-        .card:has(.note.show:hover) .mal-mascot :is(.m-ink,.m-paper){animation-play-state:paused}
+        .card:has(.note.show:hover) .mal-mascot .m-ink{animation-play-state:paused}
         .shade{position:absolute;inset:0;filter:drop-shadow(0 10px 24px rgba(0,0,0,.5))}
         .sheet{position:absolute;inset:0 0 ${SHEET_Y}px ${SHEET_X}px;overflow:hidden;background:#0a0a0c;border:2px solid #2a2a30;border-radius:6px;
                clip-path:inset(calc(100% - ${BALL_UP_SHEET + 18.5}px) calc(100% - ${BALL_IN_SHEET + 18.5}px)
@@ -381,12 +407,12 @@
         ${noteCss()}
       </style><div class="card"><div class="shade"><div class="sheet"></div></div>${noteHtml()}
         <button class="mal-mascot" aria-expanded="false">${globalThis.MALMascot.svg}</button></div>`;
-      root.querySelector('button').onclick = () => setPanel(!panelOpen());
-      globalThis.MALMascot.mount(root.querySelector('button')).catch((e) => console.debug('[MAL Auto]', e));
+      root.querySelector('.mal-mascot').onclick = () => setPanel(!panelOpen());
+      globalThis.MALMascot.mount(root.querySelector('.mal-mascot')).catch((e) => console.debug('[MAL Auto]', e));
     }
     // En pantalla completa no se ve: solo cuelga del body, como debe ser mientras ves el episodio.
     if (!mascotHost.isConnected) document.body.appendChild(mascotHost);
-    const button = mascotHost.shadowRoot.querySelector('button');
+    const button = mascotHost.shadowRoot.querySelector('.mal-mascot');
     button.dataset.tone = panelOpen() ? 'white' : pageTone();
     button.title = `${text}\n(Clic para abrir o cerrar el panel)`;
     button.setAttribute('aria-label', `${text} Abrir el panel de MAL Auto Tracker`);
@@ -410,7 +436,7 @@
     }
     if (open === card.classList.contains('open')) return;
     card.classList.toggle('open', open);
-    const button = root.querySelector('button');
+    const button = root.querySelector('.mal-mascot');
     button.setAttribute('aria-expanded', String(open));
     // Dentro del panel (oscuro) va en blanco; al cerrarlo, al tono de la web. El color cambia durante la vuelta
     // (src/mascot.js gira al cambiar aria-expanded).

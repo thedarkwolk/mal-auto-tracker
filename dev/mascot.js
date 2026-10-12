@@ -297,7 +297,7 @@
   }
   // common.js le pone el tono según lo que hay en la esquina de la ventana; aquí manda el fondo del escenario
   function syncWeb() {
-    const button = webHost?.shadowRoot.querySelector('button');
+    const button = webHost?.shadowRoot.querySelector('.mal-mascot');
     const tone = $('web-ground').value === 'light' ? 'black' : 'white';
     if (button && button.getAttribute('aria-expanded') !== 'true' && button.dataset.tone !== tone) button.dataset.tone = tone;
   }

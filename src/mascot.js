@@ -27,37 +27,31 @@
 .mal-mascot .m-face { display: block; width: 100%; height: 100%; pointer-events: none; user-select: none; }
 .mal-mascot .m-face svg { display: block; width: 100%; height: 100%; }
 
-/* Colores: bola (--m-ink) y ojos (--m-paper). Por tono de la web (--m-tone-*) y, mientras hay un aviso, el suyo. */
+/* Colores: bola (--m-ink) y ojos (--m-paper). Por tono de la web (--m-tone-*) y, mientras hay un aviso, la bola del
+   suyo; los ojos se quedan como estén. */
 .mal-mascot { --m-tone-ink: #0a0a0c; --m-tone-paper: #f4f4f5; --m-ink: var(--m-tone-ink); --m-paper: var(--m-tone-paper); }
 .mal-mascot[data-tone='white'] { --m-tone-ink: #f4f4f5; --m-tone-paper: #0a0a0c; }
-.mal-mascot[data-alert='ok'] { --m-ink: #3ecf8e; --m-paper: #f4f4f5; }
-.mal-mascot[data-alert='info'] { --m-ink: #3b93f0; --m-paper: #f4f4f5; }
-.mal-mascot[data-alert='warn'] { --m-ink: #f0b429; --m-paper: #f4f4f5; }
-.mal-mascot[data-alert='error'] { --m-ink: #e8483f; --m-paper: #f4f4f5; }
+.mal-mascot[data-alert='ok'] { --m-ink: #3ecf8e; }
+.mal-mascot[data-alert='info'] { --m-ink: #3b93f0; }
+.mal-mascot[data-alert='warn'] { --m-ink: #f0b429; }
+.mal-mascot[data-alert='error'] { --m-ink: #e8483f; }
 /* Los cambios de color (de tono al abrir o cerrar el panel, o de la web, o a un aviso sin cuenta atrás) van a la vez
    que la vuelta y con su curva */
 .mal-mascot .m-ink { fill: var(--m-ink); transition: fill ${SPIN_MS}ms cubic-bezier(0.65, 0, 0.35, 1); }
 .mal-mascot .m-paper { fill: var(--m-paper); transition: fill ${SPIN_MS}ms cubic-bezier(0.65, 0, 0.35, 1); }
 /* Los avisos de las webs (data-fade; lo pone common.js) van con animaciones y no con la transición: del color que tiene
-   la bola al salir (--m-from-*; si aún se apagaba del anterior, no es el normal) al del aviso durante la vuelta, y
+   la bola al salir (--m-from-ink; si aún se apagaba del anterior, no es el normal) al del aviso durante la vuelta, y
    después hace de cuenta atrás, apagándose hasta el normal en lo que queda de aviso (--m-fade). Al acabar ya tiene el
    normal, así que quitar el aviso no cambia nada. El borde del aviso lleva las mismas. */
 .mal-mascot[data-alert][data-fade] .m-ink {
   animation: m-in-ink ${SPIN_MS}ms cubic-bezier(0.65, 0, 0.35, 1), m-fade-ink var(--m-fade) linear ${SPIN_MS}ms forwards;
 }
-.mal-mascot[data-alert][data-fade] .m-paper {
-  animation: m-in-paper ${SPIN_MS}ms cubic-bezier(0.65, 0, 0.35, 1), m-fade-paper var(--m-fade) linear ${SPIN_MS}ms forwards;
-}
 @keyframes m-in-ink { from { fill: var(--m-from-ink, var(--m-tone-ink)); } to { fill: var(--m-ink); } }
-@keyframes m-in-paper { from { fill: var(--m-from-paper, var(--m-tone-paper)); } to { fill: var(--m-paper); } }
 @keyframes m-fade-ink { from { fill: var(--m-ink); } to { fill: var(--m-tone-ink); } }
-@keyframes m-fade-paper { from { fill: var(--m-paper); } to { fill: var(--m-tone-paper); } }
 /* Al acabar (data-unfade) vuelve al color normal durante la vuelta de regreso, desde el que tenga entonces: si el aviso
    se cerró antes de tiempo, aún no se había apagado del todo. */
 .mal-mascot[data-unfade]:not([data-alert]) .m-ink { animation: m-out-ink ${SPIN_MS}ms cubic-bezier(0.65, 0, 0.35, 1) forwards; }
-.mal-mascot[data-unfade]:not([data-alert]) .m-paper { animation: m-out-paper ${SPIN_MS}ms cubic-bezier(0.65, 0, 0.35, 1) forwards; }
 @keyframes m-out-ink { from { fill: var(--m-from-ink); } to { fill: var(--m-tone-ink); } }
-@keyframes m-out-paper { from { fill: var(--m-from-paper); } to { fill: var(--m-tone-paper); } }
 
 /* Flota suavemente, solo en vertical: girar o estirar la imagen la reescala y emborrona el borde.
    Los desplazamientos van en % de la caja de la cara. */
