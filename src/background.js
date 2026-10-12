@@ -716,25 +716,25 @@ async function toast(tabId, notice) {
 
 // ---------- Mascota de la web (esquina inferior izquierda de las webs compatibles)
 
-// Qué cara pone y qué dice (en el tooltip) según lo que esté pasando en la pestaña: idle fuera de un episodio,
-// también dentro (siguiendo el cursor) y excited cuando lo acabas. `site` hace falta cuando aún no hay episodio.
+// Qué dice el bot (en el tooltip) según lo que esté pasando en la pestaña. `site` hace falta cuando aún no hay
+// episodio.
 async function mascotFor(state, site) {
   const settings = await getSettings();
   site = state?.info.site || site;
   if (!settings.mascot || !settings.sites[site]) return { show: false };
-  const say = (mood, text) => ({ show: true, mood, text });
-  if (!settings.clientId || !(await mal.getUser())) return say('idle', 'Pulsa aquí y conecta tu cuenta de MAL: te acompaño viendo anime.');
-  if (!state) return say('idle', `¿Qué vemos hoy en ${SITES[site]}? Elige un episodio y lo apunto.`);
+  const say = (text) => ({ show: true, text });
+  if (!settings.clientId || !(await mal.getUser())) return say('Pulsa aquí y conecta tu cuenta de MAL: te acompaño viendo anime.');
+  if (!state) return say(`¿Qué vemos hoy en ${SITES[site]}? Elige un episodio y lo apunto.`);
   const { phase, episode, anime, info } = state;
   if (state.marked) {
-    return say('excited', state.result === 'updated'
+    return say(state.result === 'updated'
       ? `¡Episodio ${episode} visto! Ya está apuntado en tu lista.`
       : `¡Episodio ${episode} acabado! Ya lo tenías en tu lista.`);
   }
-  if (phase === 'resolving') return say('idle', `Buscando "${info.title}" en MyAnimeList…`);
-  if (phase === 'matched') return say('idle', `¡Episodio ${episode} de ${anime.title}! Lo marco cuando acabe.`);
-  if (phase === 'error') return say('idle', 'Algo ha fallado con MyAnimeList… Pulsa para verlo.');
-  return say('idle', 'Mmm… no sé seguro qué anime es. Pulsa y me echas una mano.');
+  if (phase === 'resolving') return say(`Buscando "${info.title}" en MyAnimeList…`);
+  if (phase === 'matched') return say(`¡Episodio ${episode} de ${anime.title}! Lo marco cuando acabe.`);
+  if (phase === 'error') return say('Algo ha fallado con MyAnimeList… Pulsa para verlo.');
+  return say('Mmm… no sé seguro qué anime es. Pulsa y me echas una mano.');
 }
 
 async function pushMascot(tabId, state, site) {
