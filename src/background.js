@@ -759,8 +759,20 @@ function updateBadge(tabId, state) {
 
 // ---------- Mensajes
 
+// Lo que pueden pedir los scripts metidos en las webs (src/content): avisar de lo que ven, pedir qué dice el bot y
+// votar desde el aviso. Todo lo demás (tu lista, cambiarla, conectar o desconectar la cuenta…) solo las páginas de la
+// extensión: el popup, las opciones y el panel, también cuando va incrustado en una web. Una web no puede hablar con
+// el background, pero si se comprometiera el proceso de una, su script no podría ir más allá de esto.
+const FROM_WEB = new Set(['episode', 'noEpisode', 'threshold', 'getMascot', 'rate', 'crSeriesFound', 'crSeriesMissing']);
+// Por el esquema y no por la dirección exacta: el panel incrustado va con una dirección dinámica (use_dynamic_url),
+// con otro id. sender.url lo pone el navegador; una web no puede hacerse pasar por chrome-extension:.
+const fromExtension = (sender) => sender.id === chrome.runtime.id && /^chrome-extension:/.test(sender.url || '');
+
 async function handle(msg, sender) {
-  const tabId = msg.tabId ?? sender.tab?.id;
+  const trusted = fromExtension(sender);
+  if (!trusted && !FROM_WEB.has(msg?.type)) throw new Error(`Mensaje no permitido: ${msg?.type}`);
+  // Un script de una web solo habla de su propia pestaña
+  const tabId = (trusted ? msg.tabId : undefined) ?? sender.tab?.id;
   switch (msg.type) {
     case 'getMascot':
       return await mascotFor(await getTab(tabId), msg.site);

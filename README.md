@@ -30,3 +30,9 @@ Crunchyroll, JKAnime, AnimeFLV o Prime Video cuando llegas al 85 % del vídeo (c
 ## Si una web cambia su diseño
 
 Los selectores están en `src/content/sites/`. Recarga la extensión en `chrome://extensions` después de editarlos.
+
+## Licencia
+
+El código es MIT (ver `LICENSE`). Lo de terceros va con su licencia: la mascota sale de
+[bloub](https://github.com/jeremy-prt/bloub) (MIT, `mascot/LICENSE-bloub.txt`) y la fuente es
+[Archivo](https://github.com/Omnibus-Type/Archivo) (SIL Open Font License 1.1, `fonts/LICENSE-archivo.txt`).

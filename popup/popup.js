@@ -2,10 +2,15 @@ import { stripSeason } from '../src/matcher.js';
 
 const $ = (s) => document.querySelector(s);
 
+// Los enlaces solo a webs (http o https): muchos vienen de fuera (plataformas, mangas…) y no deben poder llevar un
+// "javascript:" u otro esquema raro, aunque la política de seguridad del panel ya los bloquearía.
+const webUrl = (url) => (/^https?:\/\//i.test(String(url)) ? url : null);
+
 function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
     if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
+    else if (k === 'href') webUrl(v) && node.setAttribute(k, v);
     else if (v !== false && v != null) node.setAttribute(k, v === true ? '' : v);
   }
   return fill(node, ...children);
