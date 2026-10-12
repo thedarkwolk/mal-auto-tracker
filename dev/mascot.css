@@ -70,7 +70,7 @@ legend { font-weight: 700; padding: 0 4px; }
 .buttons.wrap button { flex: 1 0 40%; }
 h2.sub { margin-top: 24px; }
 .notices { display: grid; grid-template-columns: 1fr 290px; gap: 16px; }
-.web { height: 360px; }
+.web { height: 560px; }
 .web.light { outline: none; }
 
 /* ---------- Tarjetas */
@@ -87,8 +87,5 @@ figcaption { font-size: 12px; font-weight: 700; }
 figcaption small { display: block; font-weight: 400; color: var(--muted); }
 figcaption button { margin-top: 4px; font-size: 12px; padding: 2px 8px; }
 
-/* El salto de las webs (src/content/common.js) */
-.hop { animation: hop 0.45s cubic-bezier(0.3, 0.7, 0.4, 1); }
-@keyframes hop { 25% { transform: translateY(4%) scale(1.1, 0.9); } 55% { transform: translateY(-35%) scale(0.95, 1.05); } }
 .well.big { height: 210px; min-width: 190px; }
 .well.big .mal-mascot { --m-size: 150px; }

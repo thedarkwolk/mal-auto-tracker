@@ -34,11 +34,10 @@
 .mal-mascot[data-alert='info'] { --m-ink: #3b93f0; --m-paper: #f4f4f5; }
 .mal-mascot[data-alert='warn'] { --m-ink: #f0b429; --m-paper: #f4f4f5; }
 .mal-mascot[data-alert='error'] { --m-ink: #e8483f; --m-paper: #f4f4f5; }
-.mal-mascot .m-ink { fill: var(--m-ink); transition: fill 0.4s var(--m-ease); }
-.mal-mascot .m-paper { fill: var(--m-paper); transition: fill 0.4s var(--m-ease); }
-/* Al salir un aviso el color cambia mientras da la vuelta, con su misma curva. Las transiciones toman la duración del
-   estado de destino: al irse el aviso vuelve con la normal. */
-.mal-mascot[data-alert] .m-ink, .mal-mascot[data-alert] .m-paper { transition: fill ${SPIN_MS}ms cubic-bezier(0.65, 0, 0.35, 1); }
+/* Los cambios de color (de tono al abrir o cerrar el panel, o de la web, o a un aviso sin cuenta atrás) van a la vez
+   que la vuelta y con su curva */
+.mal-mascot .m-ink { fill: var(--m-ink); transition: fill ${SPIN_MS}ms cubic-bezier(0.65, 0, 0.35, 1); }
+.mal-mascot .m-paper { fill: var(--m-paper); transition: fill ${SPIN_MS}ms cubic-bezier(0.65, 0, 0.35, 1); }
 /* Los avisos de las webs (data-fade; lo pone common.js) van con animaciones y no con la transición: del color que tiene
    la bola al salir (--m-from-*; si aún se apagaba del anterior, no es el normal) al del aviso durante la vuelta, y
    después hace de cuenta atrás, apagándose hasta el normal en lo que queda de aviso (--m-fade). Al acabar ya tiene el
@@ -59,9 +58,6 @@
 .mal-mascot[data-unfade]:not([data-alert]) .m-paper { animation: m-out-paper ${SPIN_MS}ms cubic-bezier(0.65, 0, 0.35, 1) forwards; }
 @keyframes m-out-ink { from { fill: var(--m-from-ink); } to { fill: var(--m-tone-ink); } }
 @keyframes m-out-paper { from { fill: var(--m-from-paper); } to { fill: var(--m-tone-paper); } }
-
-/* Curva suave para los cambios de color */
-.mal-mascot { --m-ease: cubic-bezier(0.22, 0.61, 0.36, 1); }
 
 /* Flota suavemente, solo en vertical: girar o estirar la imagen la reescala y emborrona el borde.
    Los desplazamientos van en % de la caja de la cara. */
@@ -204,6 +200,7 @@
     let dirty = true;
     let shownAlert = '';
     let shownNotice;
+    let shownOpen = bot.getAttribute('aria-expanded') === 'true';
     let lid = null; // cómo va el parpadeo en curso (0–1), o null
     let turn = null; // cómo va la vuelta en curso (0–1), o null
     let next = null; // la cara que se pone a media vuelta
@@ -222,11 +219,13 @@
         face = pose(x - (r.left + r.width / 2), y - (r.top + r.height / 2));
       }
       face ||= neutral();
-      // Sale un aviso nuevo, acaba (o se fuerza otra cara): da la vuelta y cambia de cara a media vuelta, con los ojos
+      // Sale un aviso nuevo, acaba, se abre o se cierra el panel (o se fuerza otra cara): da la vuelta y cambia de cara a media vuelta, con los ojos
       // detrás de la bola. Si cambia sin vuelta, un parpadeo (como bloub) disimula el cambio.
       const fresh = alert && (alert !== shownAlert || bot.dataset.notice !== shownNotice);
       const over = !alert && shownAlert && !bot.dataset.face;
-      const spin = !pinned && !reduced.matches && (fresh || over || (bot.dataset.face && name !== shown));
+      const open = bot.getAttribute('aria-expanded') === 'true';
+      const spin = !pinned && !reduced.matches && (fresh || over || open !== shownOpen || (bot.dataset.face && name !== shown));
+      shownOpen = open;
       if (spin) turn = 0;
       if (turn !== null && turn < 0.5) next = face;
       else Object.assign(target, flat(face));

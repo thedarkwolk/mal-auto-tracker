@@ -185,6 +185,7 @@
     void shade.offsetWidth; // si ya flotaba, empieza de cero en la fase de la bola
     shade.style.animation = `n-float ${duration}ms ease-in-out ${-float.currentTime}ms infinite`;
   }
+  let unfades = 0;
   // Acaba el aviso en el bot: da la vuelta de regreso a su cara normal y vuelve a su color durante ella.
   function unalertBot(button) {
     if (!button.dataset.alert) return;
@@ -195,6 +196,9 @@
     delete button.dataset.unfade;
     void button.offsetWidth; // reinicia la vuelta al color si ya estaba puesta
     button.dataset.unfade = '';
+    // Acabada, fuera: si no, al cambiar luego de tono (abrir el panel) saltaría al nuevo sin transición
+    const mark = ++unfades;
+    setTimeout(() => mark === unfades && !button.dataset.alert && delete button.dataset.unfade, spinMs() + 50);
   }
 
   // Recoge el aviso hacia la bola: con su borde volviendo al color normal desde el que tiene y, si va a salir otro
@@ -328,12 +332,13 @@
   }
 
   // El bot (la mascota) y el panel van en una misma tarjeta fija abajo a la izquierda. Cerrada solo se ve el bot;
-  // al pulsarlo da un salto y el panel crece desde él como un círculo hasta llenar la tarjeta, con el bot
-  // dentro en su esquina. La tarjeta ocupa siempre su sitio pero sin recoger clics: solo el bot y el panel abierto.
+  // al pulsarlo da la vuelta y el panel sale de la bola como los avisos: el recorte empieza siendo ella y crece hasta
+  // llenar la tarjeta en lo que dura la vuelta, con el bot dentro en su esquina. Al cerrarlo, al revés. La tarjeta ocupa siempre su sitio pero sin recoger clics: solo el bot y el panel abierto.
   // El panel llena la tarjeta; su franja de abajo (la barra de filtros) deja hueco a la izquierda para el bot,
   // que va encima.
-  // Centro de la bola en la tarjeta: x = 8 + 56/2; y (desde abajo) = 6 + alto del bot × (1 − 72/130).
-  const BALL = 'at 36px calc(100% - 33px)';
+  // La bola en la tarjeta como recorte inset (arriba, derecha, abajo, izquierda): centro en x = 8 + 56/2 = 36px e
+  // y (desde abajo) = 6 + alto del bot × (1 − 72/130) ≈ 33px, radio 18,5px.
+  const BALL = 'calc(100% - 51.5px) calc(100% - 54.5px) 14.5px 17.5px';
 
   let mascotHost;
   setInterval(() => {
@@ -358,18 +363,16 @@
         .card:has(.note.show:hover) .mal-mascot :is(.m-ink,.m-paper){animation-play-state:paused}
         .shade{position:absolute;inset:0;filter:drop-shadow(0 10px 24px rgba(0,0,0,.5))}
         .sheet{position:absolute;inset:0;overflow:hidden;background:#0a0a0c;border:2px solid #2a2a30;border-radius:6px;
-               clip-path:circle(19px ${BALL});visibility:hidden;
-               transition:clip-path .35s cubic-bezier(.4,0,.2,1),visibility 0s .35s}
-        .open .sheet{clip-path:circle(150% ${BALL});visibility:visible;pointer-events:auto;
-               transition:clip-path .5s cubic-bezier(.3,.7,.2,1) .12s,visibility 0s .12s}
+               clip-path:inset(${BALL} round 18.5px);visibility:hidden;
+               transition:clip-path ${SPIN()},visibility 0s ${spinMs()}ms}
+        .open .sheet{clip-path:inset(0 round 6px);visibility:visible;pointer-events:auto;
+               transition:clip-path ${SPIN()},visibility 0s}
         .panel{display:block;width:100%;height:100%;border:0;color-scheme:dark}
         button{all:unset;cursor:pointer;border-radius:50%}
         button:focus-visible{outline:2px solid #ececef;outline-offset:2px}
         ${globalThis.MALMascot.css}
         .card .mal-mascot{--m-size:56px;position:absolute;left:8px;bottom:6px;pointer-events:auto}
-        .hop{animation:hop .45s cubic-bezier(.3,.7,.4,1)}
-        @keyframes hop{25%{transform:translateY(4%) scale(1.1,.9)}55%{transform:translateY(-35%) scale(.95,1.05)}}
-        @media (prefers-reduced-motion:reduce){.sheet,.open .sheet{transition:none}.hop{animation:none}}
+        @media (prefers-reduced-motion:reduce){.sheet,.open .sheet{transition:none}}
         ${noteCss()}
       </style><div class="card"><div class="shade"><div class="sheet"></div></div>${noteHtml()}
         <button class="mal-mascot" aria-expanded="false">${globalThis.MALMascot.svg}</button></div>`;
@@ -390,12 +393,6 @@
   let panel;
   const panelOpen = () => !!mascotHost?.shadowRoot.querySelector('.card.open');
 
-  function hop() {
-    const button = mascotHost.shadowRoot.querySelector('button');
-    button.classList.remove('hop');
-    void button.offsetWidth; // reinicia el salto
-    button.classList.add('hop');
-  }
   function setPanel(open) {
     const root = mascotHost.shadowRoot;
     const card = root.querySelector('.card');
@@ -410,10 +407,9 @@
     card.classList.toggle('open', open);
     const button = root.querySelector('button');
     button.setAttribute('aria-expanded', String(open));
-    // Dentro del panel (oscuro) va en blanco; al cerrarlo vuelve al tono de la web cuando el panel ya se ha recogido.
-    if (open) button.dataset.tone = 'white';
-    else setTimeout(() => !panelOpen() && (button.dataset.tone = pageTone()), 350);
-    if (open) hop();
+    // Dentro del panel (oscuro) va en blanco; al cerrarlo, al tono de la web. El color cambia durante la vuelta
+    // (src/mascot.js gira al cambiar aria-expanded).
+    button.dataset.tone = open ? 'white' : pageTone();
     if (open) closeNote(); // el panel ocupa el sitio del aviso
   }
 

@@ -19,12 +19,6 @@
     return bot;
   }
 
-  function hop(bot) {
-    bot.classList.remove('hop');
-    void bot.offsetWidth;
-    bot.classList.add('hop');
-  }
-
   // ---------- Cursor: el real o uno simulado
   // Simulado, el ratón de verdad no les llega a los bots (se corta en la captura) y en su lugar se les manda un
   // mousemove sintético con la posición del recorrido, relativa al centro de la bola del laboratorio.
@@ -95,7 +89,6 @@
     sent = ''; // el centro de la bola cambia con el tamaño
   }
   for (const id of ['size', 'tone', 'alert', 'face', 'expanded']) $(id).onchange = applyLab;
-  $('hop').onclick = () => hop(lab);
   let labEyes = null; // lo que devuelve mount: el estado de sus ojos
   $('blink').onclick = () => labEyes?.blink();
   applyLab();
@@ -234,16 +227,10 @@
     ['Aviso · warn', 'data-alert="warn"', { 'data-alert': 'warn' }],
     ['Aviso · error', 'data-alert="error"', { 'data-alert': 'error' }],
     ['Panel abierto', 'aria-expanded="true": mira arriba a la derecha, al panel.', { 'aria-expanded': 'true', 'data-tone': 'white' }],
-    ['Salto', 'Al abrir el panel o salir un aviso.', { 'data-tone': 'white' }, 'dark', true],
   ];
-  const live = STATES.map(([title, detail, attrs, ground, jump]) => {
+  const live = STATES.map(([title, detail, attrs, ground]) => {
     const bot = make(attrs);
-    const figure = card($('states'), title, detail, bot, ground);
-    if (jump) {
-      const button = Object.assign(document.createElement('button'), { type: 'button', textContent: 'Saltar' });
-      button.onclick = () => hop(bot);
-      figure.querySelector('figcaption').append(button);
-    }
+    card($('states'), title, detail, bot, ground);
     return bot;
   });
 
